@@ -1,0 +1,23 @@
+{
+    "requestType": 0,
+    "userID": USERID,
+    "firstName": "FIRSTNAME",
+    "lastName": "LASTNAME",
+    "email": "EMAIL",
+    "rank": "RANK"
+}
+
+{
+    "requestType": 4,
+    "userID": USERID,
+    "firstName": "FIRSTNAME",
+    "lastName": "LASTNAME",
+    "email": "EMAIL",
+    "rank": "RANK",
+    "fileID": FILEID,
+    "fileName": "FILENAME"
+}
+
+{
+    "requestType": 5
+}

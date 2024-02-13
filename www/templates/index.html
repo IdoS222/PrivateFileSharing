@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Company Name</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/index_css.css') }}">
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <div id="top-bar">
+    <div id="company-name">
+      <h2>Your Company</h2>
+    </div>
+    <div id="top-bar-controls">
+      <input type="text" id="search-bar" placeholder="Search...">
+      <button id="profile-btn">Profile</button>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <button class="sidebar-btn" onclick="createNewDiv()">Other</button>
+    <button id="settings-btn">Settings</button>
+    <button id="download-btn" onclick="downloadSelectedDiv()">Download</button>
+  </div>
+
+  <!-- Main Content -->
+  <div id="main-content">
+    <!-- Divs will be dynamically added here -->
+  </div>
+
+  <script src="{{ url_for('static', filename='js/index.js') }}"></script>
+</body>
+</html>
