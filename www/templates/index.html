@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Your Company Name</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/index_css.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+  <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 </head>
 <body>
 
@@ -28,9 +29,13 @@
 
   <!-- Main Content -->
   <div id="main-content">
-    <!-- Divs will be dynamically added here -->
+    {% if files|length > 0 %}
+      {% for file in files %}
+        <script>
+            createNewDiv(file[0], file[1], file[2], file[3], file[4], file[5], file[6], file[7]);
+        </script>
+      {% endfor %}
+    {% endif %}
   </div>
-
-  <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 </body>
 </html>

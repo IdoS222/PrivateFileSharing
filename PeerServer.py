@@ -1,3 +1,4 @@
+import json
 import socket
 import threading
 
@@ -11,6 +12,7 @@ class PeerServer:
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.MAX_CONNECTIONS = 1500
         self.serverAlive = False
+        self.StartPeerServer()
 
     def StartPeerServer(self):
         """
@@ -24,66 +26,57 @@ class PeerServer:
             while self.serverAlive:
                 clientSocket, addr = self.serverSocket.accept()
                 print("new connection is made with {}".format(addr))
-                threading.Thread(target=self.ServerLoop, args=[clientSocket, addr]).start()
+                threading.Thread(target=self.ServerLoop, args=[clientSocket, ]).start()
         except Exception as e:
             self.serverAlive = False
             print("Couldn't start the server. " + str(e))
 
-    def ServerLoop(self, clientSocket, addr):
+    def ServerLoop(self, clientSocket):
         """
         The loop that will occur in a thread when a new connection is made with a client.
         :param clientSocket: The socket that the server automatically creates when a new connection is made.
-        :param addr: The address of the peer.
         :return: Nothing
         """
         peerInterested = True
         while peerInterested:
-            dataFromPeer = self.ProcessRequest(clientSocket.recv(1024).decode())
-            if dataFromPeer:
-                if dataFromPeer[0] == "downloadPart":
-                    # logic for sending a file
-                    try:
-                        pathToFile = r"{}\{}".format(self.filesFolder, dataFromPeer[1])  # The path to the file
-                        with open(pathToFile, 'r') as file:  # opening the file
-                            file.seek(int(dataFromPeer[3]) * int(dataFromPeer[5]))  # jumping to the part of the file, the peer is interested in.
+            try:
+                data = clientSocket.recv(1024).decode()
+                if data:
+                    dataFromPeer = json.loads(data)
+                    if dataFromPeer["requestType"] == "downloadPart":
+                        # logic for sending a file
+                        pathToFile = r"{}\{}".format(self.filesFolder, dataFromPeer["fileName"])  # The path to the file
+                        with open(pathToFile, 'rb') as file:  # opening the file
+                            file.seek(int(dataFromPeer["pieceNumber"]) * int(dataFromPeer[
+                                                                                 "pieceSize"]))  # jumping to the part of the file, the peer is interested in.
                             index = 0
-                            data = ""
-                            while index < int(dataFromPeer[3]):  # reading only the part we need and stopping after we finish reading it
+                            data = b""
+                            while index < dataFromPeer[
+                                "pieceSize"]:  # reading only the part we need and stopping after we finish reading it
                                 data += file.read(index)
                                 index += 1
-                            clientSocket.send(data.encode())
-                    except Exception:
-                        print("Couldn't send the file to the peer.")
-                        clientSocket.send("False".encode())
-                elif dataFromPeer[0] == "killConnection":
-                    peerInterested = False
+                            clientSocket.send(json.dumps({"data": str(data)}).encode())
+                            print("done")
+                    elif dataFromPeer["requestType"] == "killConnection":
+                        peerInterested = False
+                    else:
+                        # we got a unique request, so we are dropping the connection
+                        peerInterested = False
                 else:
-                    # we got a unique request, so we are dropping the connection
-                    peerInterested = False
+                    continue
+            except KeyError as e:
+                # This means that we got an illegal request.
+                print(e)
+                clientSocket.send(json.dumps({"errorMessage": "Couldn't send the data"}).encode())
+                peerInterested = False
+            except ConnectionResetError as e:
+                # This means that something is wrong with the connection and we cant send an error message since it would throw another exception.
+                print(e)
+                peerInterested = False
+            except Exception as e:
+                # General exception just in case somthing unexpected happened
+                print(e)
+                peerInterested = False
 
-    def KillServer(self):
-        """
-        Kill the server
-        :return: Nothing
-        """
-        self.serverAlive = False
 
-    def ProcessRequest(self, request):
-        """
-        Parsing the request into a list.
-        :param request: The request from the peer
-        :return: A list of all the variables the request contains
-        """
-        listOfVariables = list()
-        currentWord = ""
-        index = 0
-        while index < len(request):
-            if request[index] == "_":
-                listOfVariables.append(currentWord)
-                word = ""
-                index += 1
-                continue
-            currentWord += request[index]
-            index += 1
-
-        return listOfVariables
+p = PeerServer()

@@ -96,16 +96,69 @@ class PublicTracker:
                             allFiles = filesCurser.fetchall()
                             clientSocket.send(json.dumps(allFiles).encode())
                         case 1:
-                            #upload a new file
+                            # upload a new file
                             filesConnection = sqlite3.connect("Databases/files.db")
                             filesCurser = filesConnection.cursor()
 
-                            filesCurser.execute("INSERT INTO files ()")
+                            if dataFromPeer["fileSize"] > 1000000000:  # The file size limit for now is 1 GB
+                                clientSocket.send(
+                                    json.dumps({
+                                                   "errorMessage": "piece size times the amount of pieces doesnt equals to the file size."}).encode())
+                                continue
+
+                            if dataFromPeer["pieceSize"] * dataFromPeer["amountOfPieces"] != dataFromPeer["fileSize"]:
+                                clientSocket.send(
+                                    json.dumps({
+                                                   "errorMessage": "piece size times the amount of pieces doesnt equals to the file size."}).encode())
+                                continue
+                            filesCurser.execute(
+                                "INSERT INTO files (fileName, fileSize, pieceSize, amountOfPieces, fileVisibility, fileOwners, fileUploader) "
+                                "VALUES ('{}', {}, {}, {}, '{}', '{}', '{}')".format(dataFromPeer["fileName"],
+                                                                                     dataFromPeer["fileSize"],
+                                                                                     dataFromPeer["pieceSize"],
+                                                                                     dataFromPeer["amountOfPieces"],
+                                                                                     dataFromPeer["fileVisibility"],
+                                                                                     dataFromPeer["fileOwners"],
+                                                                                     dataFromPeer["fileUploader"]))
+                            filesConnection.commit()
+                            filesConnection.close()
+                            clientSocket.send(json.dumps({"status": "The file entered the database"}).encode())
                         case 2:
-                            pass
+                            # A user is stating a download and requesting the list of peers
+                            filesConnection = sqlite3.connect("Databases/files.db")
+                            filesCurser = filesConnection.cursor()
+
+                            filesCurser.execute("SELECT * FROM files WHERE id = {}".format(dataFromPeer["fileID"]))
+                            file = filesCurser.fetchall()[0]
+
+                            if file[1] != dataFromPeer["fileName"]:  # Checking that the file id and name match
+                                clientSocket.send(
+                                    json.dumps({"errorMessage": "file name doesnt match with the database"}).encode())
+                                continue
+
+                            clientSocket.send(json.dumps({"Peers": file[6]}).encode())
                         case 3:
                             # user finished downloading a file
-                            pass
+                            filesConnection = sqlite3.connect("Databases/files.db")
+                            filesCurser = filesConnection.cursor()
+
+                            filesCurser.execute("SELECT * FROM files WHERE id = {}".format(dataFromPeer["fileID"]))
+                            file = filesCurser.fetchall()[0]
+
+                            if file[1] != dataFromPeer["fileName"]:  # Checking that the file id and name match
+                                clientSocket.send(
+                                    json.dumps({"errorMessage": "file name doesnt match with the database"}).encode())
+                                continue
+
+                            previousOwners = file[6]  # getting the owners
+                            owner = "[{}:{}]".format(addr[0], addr[1])
+                            newOwners = previousOwners + ",{}".format(owner)
+                            filesConnection.execute("UPDATE files SET fileOwners = '{}' WHERE id = {}".format(newOwners,
+                                                                                                              dataFromPeer[
+                                                                                                                  "fileID"]))
+                            filesConnection.commit()
+                            filesConnection.close()
+                            clientSocket.send(json.dumps({"status": "success"}).encode())
                         case 4:
                             # delete a file from the database
                             filesConnection = sqlite3.connect("Databases/files.db")
@@ -117,19 +170,17 @@ class PublicTracker:
                             if file[1] != dataFromPeer["fileName"]:  # Checking that the file id and name match
                                 clientSocket.send(
                                     json.dumps({"errorMessage": "file name doesnt match with the database"}).encode())
-                                peerInterested = False
                                 continue
 
                             uploader = "{}:{}:{}:{}:{}".format(dataFromPeer["userID"], dataFromPeer["firstName"],
                                                                dataFromPeer["lastName"], dataFromPeer["email"],
                                                                dataFromPeer["rank"])
-                            if uploader != file[7]:  # This means the user that sent the request isn't the uploader and he cant delete the file
+                            if uploader != file[
+                                7]:  # This means the user that sent the request isn't the uploader and he cant delete the file
                                 clientSocket.send(json.dumps(
                                     {"errorMessage": "original uploader and request uploader arent matching"}).encode()
-                                )
-                                peerInterested = False
+                                                  )
                                 continue
-
                             filesCurser.execute("DELETE FROM files WHERE id = {}".format(dataFromPeer["fileID"]))
                             filesConnection.commit()
                             filesConnection.close()

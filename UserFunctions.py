@@ -107,7 +107,7 @@ class UserFunctions:
                 try:
                     password = password + existingUsers[0][6]  # add the salt to the password
                     passHasher.verify(existingUsers[0][4], password) # verify the password
-                    return "Successfully loged in."
+                    return "Successful login."
                 except Exception:
                     return "The password is wrong."
         except Exception as e:

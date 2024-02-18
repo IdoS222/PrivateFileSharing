@@ -13,9 +13,10 @@ body {
   text-align: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   width: 100%;
-  z-index: 2;
-  display: flex;
-  justify-content: space-between;
+  z-index: 1000; /* Set a higher z-index for the top bar */
+  position: fixed; /* Fix the top bar at the top */
+  top: 0;
+  left: 0;
 }
 
 #company-name {
@@ -53,24 +54,27 @@ body {
   background-color: rgba(52, 152, 219, 0.3);
 }
 
+#main-content {
+  padding: 20px;
+  width: calc(100% - 250px);
+  float: left; /* Make the main content float to the left */
+  margin-top: 60px; /* Add margin to prevent content overlap with the top bar */
+}
+
 #sidebar {
   background-color: #2c3e50;
   color: #fff;
   padding: 15px;
   width: 250px;
-  position: relative;
+  position: fixed; /* Set position to fixed for the sidebar */
+  top: 60px; /* Set the top position to the height of the top bar */
+  right: 0; /* Align the sidebar to the right */
   height: 100%;
   box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  margin-top: 15px;
-}
-
-#main-content {
-  margin-left: 250px;
-  padding: 20px;
-  width: calc(100% - 250px);
+  z-index: 999; /* Set a lower z-index for the sidebar */
 }
 
 .sidebar-btn {
@@ -96,12 +100,21 @@ body {
   text-align: center;
   color: #fff;
   text-decoration: none;
-  background-color: transparent;
-  border: 1px solid #fff;
+  border: 1px solid transparent;
   border-radius: 15px;
   margin-bottom: 10px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+#download-btn:disabled {
+  background-color: #e74c3c; /* Red color when disabled */
+  cursor: not-allowed;
+}
+
+#download-btn.enabled {
+  background-color: #2ecc71; /* Green color when enabled */
+  border-color: #27ae60;
 }
 
 #download-btn:hover,

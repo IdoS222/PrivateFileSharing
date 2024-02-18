@@ -1,21 +1,25 @@
+import json
 import socket
 import flask
 import flask_login
 from flask_login import LoginManager
 from flask import Flask, render_template, request, redirect
 import os
+import subprocess
 from UserFunctions import UserFunctions
 
 
 class User(flask_login.UserMixin):
-    def __init__(self, user_id, firstName, lastName, email, rank, authenticated=False):
+    def __init__(self, user_id, firstName, lastName, email, rank, tracker=None, authenticated=False):
+        if tracker is None:
+            tracker = ["0.0.0.0", 0]
         self.user_id = user_id
         self.firstName = firstName
         self.lastName = lastName
         self.email = email
         self.rank = rank
         self.authenticated = authenticated
-        self.tracker = ["0.0.0.0", 0]
+        self.tracker = tracker
 
     def is_active(self):
         """
@@ -65,16 +69,41 @@ def index():
             if tracker[0] == "0.0.0.0":  # This means the user didn't pick a tracker yet
                 return render_template("index.html")
 
+            # Connecting to the tracker and getting the announcing info and the files
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect(tuple(tracker))
-            request = {
-                "requestType": 0000,
+            announcingRequest = {
+                "requestType": 6,
                 "userID": user.user_id,
                 "firstName": user.firstName,
                 "lastName": user.lastName,
                 "email": user.email,
                 "rank": user.rank
             }
+            sock.send(json.dumps(announcingRequest).encode())
+            announcingInfo = json.loads(sock.recv(1024))
+            try:
+                print(announcingInfo["trackerName"])
+                print(announcingInfo["trackerDescription"])
+                print(announcingInfo["trackerOwner"])
+            except Exception:
+                # we didn't get the announcing info from the tracker.
+                return render_template("index.html")
+
+            filesRequest = {
+                "requestType": 0,
+                "userID": user.user_id,
+                "firstName": user.firstName,
+                "lastName": user.lastName,
+                "email": user.email,
+                "rank": user.rank
+            }
+            sock.send(json.dumps(filesRequest).encode())
+            files = json.loads(sock.recv(1024))
+
+            print(files)
+
+            return render_template("index.html", files=files)
         except Exception as e:
             print(e)
 
@@ -110,7 +139,6 @@ def register():
 def login():
     if request.method == "GET":
         return render_template("login.html")
-
     try:
         print(request.values["email"])
         print(request.values["password"])
@@ -118,9 +146,10 @@ def login():
         return render_template("tough_guy.html")
 
     answer = UserFunctions.process_login(request.values["email"], request.values["password"])
-    if answer == "Successfully loged in.":
+    if answer == "Successful login.":
         info = UserFunctions.get_user_info(request.values["email"])
-        userActive[flask.request.values["email"]] = User(info[0], info[1], info[2], info[3], info[4])
+        userActive[flask.request.values["email"]] = User(info[0], info[1], info[2], info[3], info[4],
+                                                         ["127.0.0.1", 6987])
         flask_login.login_user(userActive.get(flask.request.values["email"]))
         return redirect('/')
     else:
@@ -132,8 +161,13 @@ def load_user(user_email):
     return userActive.get(user_email)
 
 
+@login_manager.unauthorized_handler
+def unauthorized_callback():  # This handler is called when trying to acsess the index page without a login session.
+    return redirect('/login')
+
+
 @app.route("/logout")
-def logout():
+def logout():  # handling the logout
     userActive.popitem()
     flask_login.logout_user()
     return redirect("/login")
@@ -146,5 +180,64 @@ def settings():
         return render_template("settings.html")
 
 
+def download_file(fileID, fileName, fileSize, pieceSize, amountOfPieces, fileOwners, path):
+    """
+    Downloading a file.
+    :param fileID: The id of the file.
+    :param fileName: The name of the file.
+    :param fileSize: The size of the file.
+    :param pieceSize: The size of one piece.
+    :param amountOfPieces: The number of pieces needed to create a file.
+    :param fileOwners: Where to download the file from.
+    :param path: Where to download the file to.
+    :return: True if the download succeeded and false if it isn't.
+    """
+    pass
+
+
+def download_pieces_from_peer(addr, piecesToDownload, pieceSize):
+    """
+    Downloading all the pieces the function is instructed to from the peer on the addr.
+    :param addr: The address of the peer.
+    :param piecesToDownload: The pieces we need to download
+    :param pieceSize: The size of each piece.
+    :return: Nothing.
+    """
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect(tuple(addr))
+    for piece in piecesToDownload:
+        pieceRequest = {
+            "requestType": "downloadPart",
+            "pieceNumber": piece,
+            "pieceSize": pieceSize,
+            "fileName": "testFile.xlsx"
+        }
+        sock.send(json.dumps(pieceRequest).encode())
+        data = read_from_socket(sock)
+        dataFromPeer = json.loads(data)
+        with open("files/{}".format(piece), "x") as file:
+            subprocess.run(["attrib", "+H", "files/{}".format(piece)], check=True)
+            file.write(dataFromPeer["data"])
+
+
+def read_from_socket(sock):
+    data = b''
+
+    while True:
+        try:
+            buff = sock.recv(4096)
+            if len(buff) <= 0:
+                break
+
+            data += buff
+        except Exception as e:
+            print(e)
+            break
+
+    return data
+
+
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=80)
+    # app.run(host="0.0.0.0", port=80)
+    download_pieces_from_peer(["127.0.0.1", 15674], [0], 100)
