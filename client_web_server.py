@@ -1,3 +1,4 @@
+import base64
 import json
 import socket
 import flask
@@ -56,6 +57,7 @@ app = Flask(__name__, template_folder=os.path.join("www", "templates"),
 app.config['SECRET_KEY'] = 'dashfqh9f8hfwdfkjwefh78y9342h'  # Secret Key
 login_manager = LoginManager()  # Login manager object
 login_manager.init_app(app)
+filesFolder = r"C:\Users\User\Desktop\Test"
 
 
 @app.route('/')
@@ -180,7 +182,7 @@ def settings():
         return render_template("settings.html")
 
 
-def download_file(fileID, fileName, fileSize, pieceSize, amountOfPieces, fileOwners, path):
+def download_file(fileName, fileSize, pieceSize, amountOfPieces, fileOwners, path):
     """
     Downloading a file.
     :param fileID: The id of the file.
@@ -192,15 +194,17 @@ def download_file(fileID, fileName, fileSize, pieceSize, amountOfPieces, fileOwn
     :param path: Where to download the file to.
     :return: True if the download succeeded and false if it isn't.
     """
-    pass
+    owners = list()
 
 
-def download_pieces_from_peer(addr, piecesToDownload, pieceSize):
+
+def download_pieces_from_peer(addr, piecesToDownload, pieceSize, fileName):
     """
     Downloading all the pieces the function is instructed to from the peer on the addr.
     :param addr: The address of the peer.
     :param piecesToDownload: The pieces we need to download
     :param pieceSize: The size of each piece.
+    :param fileName: The name of the file
     :return: Nothing.
     """
 
@@ -211,33 +215,22 @@ def download_pieces_from_peer(addr, piecesToDownload, pieceSize):
             "requestType": "downloadPart",
             "pieceNumber": piece,
             "pieceSize": pieceSize,
-            "fileName": "testFile.xlsx"
+            "fileName": fileName
         }
         sock.send(json.dumps(pieceRequest).encode())
-        data = read_from_socket(sock)
-        dataFromPeer = json.loads(data)
-        with open("files/{}".format(piece), "x") as file:
+        buffer = ""
+        lenOfData = ""
+        while buffer != ".":
+            buffer = sock.recv(1).decode()
+            lenOfData += buffer
+        dataFromPeer = sock.recv(int(lenOfData[:-1])).decode()
+        jsonData = json.loads(dataFromPeer)
+        chuckData = base64.b64decode(jsonData["data"])
+        with open("files/{}".format(piece), "wb") as file:
             subprocess.run(["attrib", "+H", "files/{}".format(piece)], check=True)
-            file.write(dataFromPeer["data"])
-
-
-def read_from_socket(sock):
-    data = b''
-
-    while True:
-        try:
-            buff = sock.recv(4096)
-            if len(buff) <= 0:
-                break
-
-            data += buff
-        except Exception as e:
-            print(e)
-            break
-
-    return data
+            file.write(chuckData)
 
 
 if __name__ == '__main__':
-    # app.run(host="0.0.0.0", port=80)
-    download_pieces_from_peer(["127.0.0.1", 15674], [0], 100)
+    #app.run(host="0.0.0.0", port=80)
+    download_file("test", 1000, 100, 10, "['127.0.0.1', 1234],['127.0.0.1', 1234]", filesFolder)

@@ -1,12 +1,13 @@
 import json
 import socket
 import threading
+import base64
 
 
 class PeerServer:
     ip = "0.0.0.0"
     port = 15674
-    filesFolder = r"C:\Users\Owner\Desktop\Test"
+    filesFolder = r"C:\Users\User\Desktop\Test"
 
     def __init__(self):
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -50,12 +51,15 @@ class PeerServer:
                             file.seek(int(dataFromPeer["pieceNumber"]) * int(dataFromPeer[
                                                                                  "pieceSize"]))  # jumping to the part of the file, the peer is interested in.
                             index = 0
-                            data = b""
+                            data = bytes()
                             while index < dataFromPeer[
                                 "pieceSize"]:  # reading only the part we need and stopping after we finish reading it
                                 data += file.read(index)
                                 index += 1
-                            clientSocket.send(json.dumps({"data": str(data)}).encode())
+
+                            jsonDump = json.dumps({"data": (base64.b64encode(data)).decode('utf8')})
+                            messageToClient = "{}.{}".format(len(jsonDump), jsonDump).encode()
+                            clientSocket.send(messageToClient)
                             print("done")
                     elif dataFromPeer["requestType"] == "killConnection":
                         peerInterested = False
