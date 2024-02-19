@@ -151,7 +151,7 @@ def login():
     if answer == "Successful login.":
         info = UserFunctions.get_user_info(request.values["email"])
         userActive[flask.request.values["email"]] = User(info[0], info[1], info[2], info[3], info[4],
-                                                         ["127.0.0.1", 6987])
+                                                         ["0.0.0.0", 6987])
         flask_login.login_user(userActive.get(flask.request.values["email"]))
         return redirect('/')
     else:
@@ -194,8 +194,20 @@ def download_file(fileName, fileSize, pieceSize, amountOfPieces, fileOwners, pat
     :param path: Where to download the file to.
     :return: True if the download succeeded and false if it isn't.
     """
+    commaCounter = -1
     owners = list()
+    owner = ""
+    for char in fileOwners:
+        if char == ",":
+            commaCounter += 1
+            if commaCounter % 2 != 0:
+                owners.append(owner)
+                owner = ""
+                continue
 
+        owner += char
+
+    print(owners)
 
 
 def download_pieces_from_peer(addr, piecesToDownload, pieceSize, fileName):
@@ -233,4 +245,4 @@ def download_pieces_from_peer(addr, piecesToDownload, pieceSize, fileName):
 
 if __name__ == '__main__':
     #app.run(host="0.0.0.0", port=80)
-    download_file("test", 1000, 100, 10, "['127.0.0.1', 1234],['127.0.0.1', 1234]", filesFolder)
+    download_file("file.exe", 1000, 100, 10, "['127.0.0.1', 1234],['127.0.0.1', 12345]", filesFolder)

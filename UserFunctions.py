@@ -4,7 +4,7 @@ import os
 import random
 import string
 
-#import argon2
+import argon2
 
 
 class UserFunctions:
@@ -58,7 +58,7 @@ class UserFunctions:
             return "The password and the confirm password dont match"
 
         # Hash the password using the argon2 algorithm.
-        #passHasher = argon2.PasswordHasher()
+        passHasher = argon2.PasswordHasher()
         salt = ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase, k=32))
         passHash = passHasher.hash(password + salt)
 
@@ -91,7 +91,7 @@ class UserFunctions:
         """
 
         # Hash the password using the argon2 algorithm.
-        #passHasher = argon2.PasswordHasher()
+        passHasher = argon2.PasswordHasher()
 
         try:
             usersConnection = sqlite3.connect("Databases/users.db")
@@ -105,8 +105,8 @@ class UserFunctions:
                 return "The user doesnt exists"
             else:
                 try:
-                    #password = password + existingUsers[0][6]  # add the salt to the password
-                    #passHasher.verify(existingUsers[0][4], password) # verify the password
+                    password = password + existingUsers[0][6]  # add the salt to the password
+                    passHasher.verify(existingUsers[0][4], password) # verify the password
                     return "Successful login."
                 except Exception:
                     return "The password is wrong."

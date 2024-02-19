@@ -150,9 +150,9 @@ class PublicTracker:
                                     json.dumps({"errorMessage": "file name doesnt match with the database"}).encode())
                                 continue
 
-                            previousOwners = file[6]  # getting the owners
-                            owner = "[{}:{}]".format(addr[0], addr[1])
-                            newOwners = previousOwners + ",{}".format(owner)
+                            previousOwners = json.loads(file[6])  # getting the owners
+                            owner = (addr[0], 15674)
+                            newOwners = json.dumps(previousOwners.append(owner))
                             filesConnection.execute("UPDATE files SET fileOwners = '{}' WHERE id = {}".format(newOwners,
                                                                                                               dataFromPeer[
                                                                                                                   "fileID"]))

@@ -9,7 +9,7 @@ body {
 #top-bar {
   background-color: #3498db;
   color: #fff;
-  padding: 15px;
+  padding: 4px;
   text-align: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   width: 100%;
@@ -27,17 +27,9 @@ body {
   margin: 0;
   font-size: 24px;
 }
-
 #top-bar-controls {
   display: flex;
   align-items: center;
-}
-
-#search-bar {
-  padding: 8px;
-  margin-right: 10px;
-  border: none;
-  border-radius: 5px;
 }
 
 #profile-btn {
@@ -67,7 +59,7 @@ body {
   padding: 15px;
   width: 250px;
   position: fixed; /* Set position to fixed for the sidebar */
-  top: 60px; /* Set the top position to the height of the top bar */
+  top: 75px; /* Set the top position to the height of the top bar */
   right: 0; /* Align the sidebar to the right */
   height: 100%;
   box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
