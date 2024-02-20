@@ -1,13 +1,17 @@
 import base64
+import hashlib
 import json
 import socket
+import threading
 import flask
 import flask_login
 from flask_login import LoginManager
 from flask import Flask, render_template, request, redirect
 import os
 import subprocess
-from UserFunctions import UserFunctions
+
+
+# from UserFunctions import UserFunctions
 
 
 class User(flask_login.UserMixin):
@@ -57,7 +61,7 @@ app = Flask(__name__, template_folder=os.path.join("www", "templates"),
 app.config['SECRET_KEY'] = 'dashfqh9f8hfwdfkjwefh78y9342h'  # Secret Key
 login_manager = LoginManager()  # Login manager object
 login_manager.init_app(app)
-filesFolder = r"C:\Users\User\Desktop\Test"
+filesFolder = r"C:\Users\User\Desktop\Test2"
 
 
 @app.route('/')
@@ -182,37 +186,76 @@ def settings():
         return render_template("settings.html")
 
 
-def download_file(fileName, fileSize, pieceSize, amountOfPieces, fileOwners, path):
+def download_file(fileName, fileSize, pieceSize, amountOfPieces, path):
     """
     Downloading a file.
-    :param fileID: The id of the file.
     :param fileName: The name of the file.
     :param fileSize: The size of the file.
     :param pieceSize: The size of one piece.
     :param amountOfPieces: The number of pieces needed to create a file.
-    :param fileOwners: Where to download the file from.
     :param path: Where to download the file to.
     :return: True if the download succeeded and false if it isn't.
     """
-    commaCounter = -1
-    owners = list()
-    owner = ""
-    for char in fileOwners:
-        if char == ",":
-            commaCounter += 1
-            if commaCounter % 2 != 0:
-                owners.append(owner)
-                owner = ""
-                continue
 
-        owner += char
+    pieces = []
 
-    print(owners)
+    for piece in range(amountOfPieces):
+        pieces.append(piece)
 
 
-def download_pieces_from_peer(addr, piecesToDownload, pieceSize, fileName):
+    # Distribution of the pieces between owners.
+    total_pieces = len(pieces)
+    total_owners = len(fileOwners)
+
+    pieces_per_owner = total_pieces // total_owners
+    remaining_pieces = total_pieces % total_owners
+
+    distribution = {owner: [] for owner in fileOwners}
+
+    threads = []
+    piece_index = 0
+    for owner in fileOwners:
+        # Distribute equal pieces to each owner
+        thread_pieces_indices = list(range(piece_index, piece_index + pieces_per_owner))
+        t = threading.Thread(target=download_pieces_from_peer,
+                             args=(owner, thread_pieces_indices, pieceSize, fileName, path))
+        t.start()
+        threads.append(t)
+        distribution[owner].extend(thread_pieces_indices)
+        piece_index += pieces_per_owner
+
+        # Distribute remaining pieces if any
+        if remaining_pieces > 0:
+            remaining_piece_index = piece_index
+            t = threading.Thread(target=download_pieces_from_peer,
+                                 args=(owner, [remaining_piece_index], pieces, pieceSize, fileName, path))
+            t.start()
+            threads.append(t)
+            distribution[owner].append(remaining_piece_index)
+            piece_index += 1
+            remaining_pieces -= 1
+
+    for thread in threads:
+        thread.join()
+
+    fileData = b''
+    # Merge all the small files to one large file.
+    for piece in range(amountOfPieces):
+        with open("{}/{}{}".format(path, piece, fileName), "rb") as pieceFile:
+            pieceData = pieceFile.read()
+        fileData += pieceData
+        os.remove("{}/{}{}".format(path, piece, fileName))
+
+    with open("{}/{}".format(path, fileName), "wb") as file:
+        file.write(fileData)
+
+    # Validate the file
+
+
+def download_pieces_from_peer(addr, piecesToDownload, pieceSize, fileName, path, listOfHashes):
     """
     Downloading all the pieces the function is instructed to from the peer on the addr.
+    :param path: Where to download the file
     :param addr: The address of the peer.
     :param piecesToDownload: The pieces we need to download
     :param pieceSize: The size of each piece.
@@ -238,11 +281,16 @@ def download_pieces_from_peer(addr, piecesToDownload, pieceSize, fileName):
         dataFromPeer = sock.recv(int(lenOfData[:-1])).decode()
         jsonData = json.loads(dataFromPeer)
         chuckData = base64.b64decode(jsonData["data"])
-        with open("files/{}".format(piece), "wb") as file:
-            subprocess.run(["attrib", "+H", "files/{}".format(piece)], check=True)
+        # Validate the piece
+        chuckHash = hashlib.sha256(chuckData)
+        if chuckHash != listOfHashes[piece]:
+            print("we got a broken piece. index:{}".format(piece))
+            continue
+        with open("{}/{}{}".format(path, piece, fileName), "wb") as file:
+            subprocess.run(["attrib", "+H", "{}/{}{}".format(path, piece, fileName)], check=True)
             file.write(chuckData)
 
 
 if __name__ == '__main__':
-    #app.run(host="0.0.0.0", port=80)
-    download_file("file.exe", 1000, 100, 10, "['127.0.0.1', 1234],['127.0.0.1', 12345]", filesFolder)
+    # app.run(host="0.0.0.0", port=80)
+    download_file("test.dat", 2048, 100, 21, (("127.0.0.1", 15674),), filesFolder)

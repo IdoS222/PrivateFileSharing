@@ -48,19 +48,16 @@ class PeerServer:
                         # logic for sending a file
                         pathToFile = r"{}\{}".format(self.filesFolder, dataFromPeer["fileName"])  # The path to the file
                         with open(pathToFile, 'rb') as file:  # opening the file
-                            file.seek(int(dataFromPeer["pieceNumber"]) * int(dataFromPeer[
-                                                                                 "pieceSize"]))  # jumping to the part of the file, the peer is interested in.
+                            file.seek(int(dataFromPeer["pieceNumber"]) * int(dataFromPeer["pieceSize"]))  # jumping to the part of the file, the peer is interested in.
                             index = 0
                             data = bytes()
-                            while index < dataFromPeer[
-                                "pieceSize"]:  # reading only the part we need and stopping after we finish reading it
-                                data += file.read(index)
+                            while index < dataFromPeer["pieceSize"]:  # reading only the part we need and stopping after we finish reading it
+                                data += file.read(1)
                                 index += 1
-
+                            print(data)
                             jsonDump = json.dumps({"data": (base64.b64encode(data)).decode('utf8')})
                             messageToClient = "{}.{}".format(len(jsonDump), jsonDump).encode()
                             clientSocket.send(messageToClient)
-                            print("done")
                     elif dataFromPeer["requestType"] == "killConnection":
                         peerInterested = False
                     else:
@@ -74,7 +71,8 @@ class PeerServer:
                 clientSocket.send(json.dumps({"errorMessage": "Couldn't send the data"}).encode())
                 peerInterested = False
             except ConnectionResetError as e:
-                # This means that something is wrong with the connection and we cant send an error message since it would throw another exception.
+                # This means that something is wrong with the connection and we cant send an error message since it
+                # would throw another exception.
                 print(e)
                 peerInterested = False
             except Exception as e:

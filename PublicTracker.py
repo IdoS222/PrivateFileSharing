@@ -4,6 +4,7 @@ import threading
 import sqlite3
 import os
 from UserFunctions import UserFunctions
+import hashlib
 
 
 class PublicTracker:
@@ -36,7 +37,8 @@ class PublicTracker:
                     amountOfPieces INTEGER,
                     fileVisibility TEXT,
                     fileOwners TEXT,
-                    fileUploader TEXT
+                    fileUploader TEXT,
+                    listOfHashes TEXT
             )""")
 
             newFilesConnection.commit()
@@ -103,13 +105,13 @@ class PublicTracker:
                             if dataFromPeer["fileSize"] > 1000000000:  # The file size limit for now is 1 GB
                                 clientSocket.send(
                                     json.dumps({
-                                                   "errorMessage": "piece size times the amount of pieces doesnt equals to the file size."}).encode())
+                                        "errorMessage": "piece size times the amount of pieces doesnt equals to the file size."}).encode())
                                 continue
 
                             if dataFromPeer["pieceSize"] * dataFromPeer["amountOfPieces"] != dataFromPeer["fileSize"]:
                                 clientSocket.send(
                                     json.dumps({
-                                                   "errorMessage": "piece size times the amount of pieces doesnt equals to the file size."}).encode())
+                                        "errorMessage": "piece size times the amount of pieces doesnt equals to the file size."}).encode())
                                 continue
                             filesCurser.execute(
                                 "INSERT INTO files (fileName, fileSize, pieceSize, amountOfPieces, fileVisibility, fileOwners, fileUploader) "
@@ -119,12 +121,13 @@ class PublicTracker:
                                                                                      dataFromPeer["amountOfPieces"],
                                                                                      dataFromPeer["fileVisibility"],
                                                                                      dataFromPeer["fileOwners"],
-                                                                                     dataFromPeer["fileUploader"]))
+                                                                                     dataFromPeer["fileUploader"]),
+                                                                                     dataFromPeer["listOfHashes"])
                             filesConnection.commit()
                             filesConnection.close()
                             clientSocket.send(json.dumps({"status": "The file entered the database"}).encode())
                         case 2:
-                            # A user is stating a download and requesting the list of peers
+                            # A user is stating a download and requesting the list of peers and a list of hashes
                             filesConnection = sqlite3.connect("Databases/files.db")
                             filesCurser = filesConnection.cursor()
 
@@ -136,7 +139,7 @@ class PublicTracker:
                                     json.dumps({"errorMessage": "file name doesnt match with the database"}).encode())
                                 continue
 
-                            clientSocket.send(json.dumps({"Peers": file[6]}).encode())
+                            clientSocket.send(json.dumps({"Peers": file[6], "listOfHashes": file[8]}).encode())
                         case 3:
                             # user finished downloading a file
                             filesConnection = sqlite3.connect("Databases/files.db")
