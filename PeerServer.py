@@ -7,7 +7,7 @@ import base64
 class PeerServer:
     ip = "0.0.0.0"
     port = 15674
-    filesFolder = r"C:\Users\User\Desktop\Test"
+    filesFolder = r"C:\Users\owner\Desktop\Test"
 
     def __init__(self):
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -54,14 +54,10 @@ class PeerServer:
                             while index < dataFromPeer["pieceSize"]:  # reading only the part we need and stopping after we finish reading it
                                 data += file.read(1)
                                 index += 1
-                            print(data)
                             jsonDump = json.dumps({"data": (base64.b64encode(data)).decode('utf8')})
                             messageToClient = "{}.{}".format(len(jsonDump), jsonDump).encode()
                             clientSocket.send(messageToClient)
                     elif dataFromPeer["requestType"] == "killConnection":
-                        peerInterested = False
-                    else:
-                        # we got a unique request, so we are dropping the connection
                         peerInterested = False
                 else:
                     continue

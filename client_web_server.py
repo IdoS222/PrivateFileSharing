@@ -9,72 +9,36 @@ from flask_login import LoginManager
 from flask import Flask, render_template, request, redirect
 import os
 import subprocess
-
-
-# from UserFunctions import UserFunctions
-
-
-class User(flask_login.UserMixin):
-    def __init__(self, user_id, firstName, lastName, email, rank, tracker=None, authenticated=False):
-        if tracker is None:
-            tracker = ["0.0.0.0", 0]
-        self.user_id = user_id
-        self.firstName = firstName
-        self.lastName = lastName
-        self.email = email
-        self.rank = rank
-        self.authenticated = authenticated
-        self.tracker = tracker
-
-    def is_active(self):
-        """
-        :return: True because all users are active
-        """
-        return True
-
-    def get_id(self):
-        """
-        :return: The email of the user.
-        """
-        return self.email
-
-    def is_authenticated(self):
-        """
-        :return: True if the user is authenticated and false if he isn't.
-        """
-        return self.authenticated
-
-    def is_anonymous(self):
-        """
-        :return: False
-        """
-        return False
-
-    def __str__(self):
-        return "{}:{}:{}:{}:{}:{}".format(self.user_id, self.firstName, self.lastName, self.email, self.rank,
-                                          self.tracker)
+from UserFunctions import UserFunctions
+from user import User
 
 
 userActive = {}
-app = Flask(__name__, template_folder=os.path.join("www", "templates"),
-            static_folder=os.path.join("www", "static"))  # App object
+app = Flask(__name__, template_folder=os.path.join("www", "templates"),static_folder=os.path.join("www", "static"))  # App object
 app.config['SECRET_KEY'] = 'dashfqh9f8hfwdfkjwefh78y9342h'  # Secret Key
 login_manager = LoginManager()  # Login manager object
 login_manager.init_app(app)
-filesFolder = r"C:\Users\User\Desktop\Test2"
+# login_manager.login_view = "/"  # will redirect user to login page
+
+filesFolder = r"C:\Users\owner\Desktop\Test2"
+
+# todo: custom decorator for specific usage (@admin_required)
+# todo:
 
 
 @app.route('/')
-@flask_login.login_required
+# @flask_login.login_required
 def index():
+    if flask_login.current_user.is_authenticated:
+        return render_template("index.html")
+
+    return redirect("/login")
+
     if request.method == "GET":
         try:  # We are trying to connect to the tracker to get all the files before giving the page back to the user.
-            user = list(userActive.values())[0]
-            tracker = user.tracker
+            return render_template("index.html")
 
-            if tracker[0] == "0.0.0.0":  # This means the user didn't pick a tracker yet
-                return render_template("index.html")
-
+            """
             # Connecting to the tracker and getting the announcing info and the files
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect(tuple(tracker))
@@ -110,6 +74,7 @@ def index():
             print(files)
 
             return render_template("index.html", files=files)
+        """
         except Exception as e:
             print(e)
 
@@ -162,9 +127,18 @@ def login():
         return answer
 
 
+#
+
+
 @login_manager.user_loader
 def load_user(user_email):
-    return userActive.get(user_email)
+    # Serch user email in db
+    #found_user = users.find_one(user_email)
+    #if found_user:
+        #return User()  # create instance of User
+
+    return None
+    # return userActive.get(user_email)
 
 
 @login_manager.unauthorized_handler
@@ -186,9 +160,10 @@ def settings():
         return render_template("settings.html")
 
 
-def download_file(fileName, fileSize, pieceSize, amountOfPieces, path):
+def download_file(fileID, fileName, fileSize, pieceSize, amountOfPieces, path):
     """
     Downloading a file.
+    :param fileID: The id of the file in the database.
     :param fileName: The name of the file.
     :param fileSize: The size of the file.
     :param pieceSize: The size of one piece.
@@ -197,43 +172,61 @@ def download_file(fileName, fileSize, pieceSize, amountOfPieces, path):
     :return: True if the download succeeded and false if it isn't.
     """
 
+    # Sending another request to the tracker incase the amount of owners is different and to get the list of hashes
+    user = list(userActive.values())[0]
+    request = json.dumps({
+        "requestType": 2,
+        "userID": user.user_id,
+        "firstName": user.firstName,
+        "lastName": user.lastName,
+        "email": user.email,
+        "rank": user.rank,
+        "fileID": fileID,
+        "fileName": fileName
+    })
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect(tuple(user.tracker))
+    sock.send(request.encode())
+
+    dataFromTracker = sock.recv(1024).decode()
+    jsonData = json.loads(dataFromTracker)
+
+    listOfHashes = jsonData["listOfHashes"]
+    fileOwners = jsonData["Peers"]
     pieces = []
 
     for piece in range(amountOfPieces):
         pieces.append(piece)
 
-
-    # Distribution of the pieces between owners.
-    total_pieces = len(pieces)
-    total_owners = len(fileOwners)
-
-    pieces_per_owner = total_pieces // total_owners
-    remaining_pieces = total_pieces % total_owners
+    # Distribution of the pieces between owners
+    piecesPerOwner = len(pieces) // len(fileOwners)
+    remainingPieces = len(pieces) % len(fileOwners)
 
     distribution = {owner: [] for owner in fileOwners}
 
     threads = []
-    piece_index = 0
+    pieceIndex = 0
     for owner in fileOwners:
         # Distribute equal pieces to each owner
-        thread_pieces_indices = list(range(piece_index, piece_index + pieces_per_owner))
+        thread_pieces_indices = list(range(pieceIndex, pieceIndex + piecesPerOwner))
         t = threading.Thread(target=download_pieces_from_peer,
-                             args=(owner, thread_pieces_indices, pieceSize, fileName, path))
+                             args=(owner, thread_pieces_indices, pieceSize, fileName, path, listOfHashes))
         t.start()
         threads.append(t)
         distribution[owner].extend(thread_pieces_indices)
-        piece_index += pieces_per_owner
+        pieceIndex += piecesPerOwner
 
         # Distribute remaining pieces if any
-        if remaining_pieces > 0:
-            remaining_piece_index = piece_index
+        if remainingPieces > 0:
+            remaining_piece_index = pieceIndex
             t = threading.Thread(target=download_pieces_from_peer,
-                                 args=(owner, [remaining_piece_index], pieces, pieceSize, fileName, path))
+                                 args=(owner, [remaining_piece_index], pieces, pieceSize, fileName, path, listOfHashes))
             t.start()
             threads.append(t)
             distribution[owner].append(remaining_piece_index)
-            piece_index += 1
-            remaining_pieces -= 1
+            pieceIndex += 1
+            remainingPieces -= 1
 
     for thread in threads:
         thread.join()
@@ -249,7 +242,7 @@ def download_file(fileName, fileSize, pieceSize, amountOfPieces, path):
     with open("{}/{}".format(path, fileName), "wb") as file:
         file.write(fileData)
 
-    # Validate the file
+    # Validate the file size.
 
 
 def download_pieces_from_peer(addr, piecesToDownload, pieceSize, fileName, path, listOfHashes):
@@ -259,7 +252,8 @@ def download_pieces_from_peer(addr, piecesToDownload, pieceSize, fileName, path,
     :param addr: The address of the peer.
     :param piecesToDownload: The pieces we need to download
     :param pieceSize: The size of each piece.
-    :param fileName: The name of the file
+    :param fileName: The name of the file.
+    :param listOfHashes: A list of hashes for each piece.
     :return: Nothing.
     """
 
@@ -292,5 +286,4 @@ def download_pieces_from_peer(addr, piecesToDownload, pieceSize, fileName, path,
 
 
 if __name__ == '__main__':
-    # app.run(host="0.0.0.0", port=80)
-    download_file("test.dat", 2048, 100, 21, (("127.0.0.1", 15674),), filesFolder)
+    app.run(host="0.0.0.0", port=80)

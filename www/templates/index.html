@@ -30,9 +30,9 @@
   <div id="main-content">
     {% if files|length > 0 %}
       {% for file in files %}
-        <script>
-            createNewDiv(file[0], file[1], file[2], file[3], file[4], file[5], file[6], file[7]);
-        </script>
+      <div>
+        <h4>{{ file.title }}</h4>
+      </div>
       {% endfor %}
     {% endif %}
   </div>

@@ -3,7 +3,6 @@ import sqlite3
 import os
 import random
 import string
-
 import argon2
 
 
@@ -106,7 +105,7 @@ class UserFunctions:
             else:
                 try:
                     password = password + existingUsers[0][6]  # add the salt to the password
-                    passHasher.verify(existingUsers[0][4], password) # verify the password
+                    passHasher.verify(existingUsers[0][4], password)  # verify the password
                     return "Successful login."
                 except Exception:
                     return "The password is wrong."
@@ -138,7 +137,8 @@ class UserFunctions:
                 if len(existingUsers) > 1:
                     return False
                 else:
-                    if existingUsers[0][0] == userID and existingUsers[0][1] == firstName and existingUsers[0][2] == lastName and existingUsers[0][3] == email and existingUsers[0][5] == rank:
+                    if existingUsers[0][0] == userID and existingUsers[0][1] == firstName and existingUsers[0][
+                        2] == lastName and existingUsers[0][3] == email and existingUsers[0][5] == rank:
                         return True
                     else:
                         return False

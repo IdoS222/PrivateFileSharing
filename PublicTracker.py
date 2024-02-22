@@ -4,7 +4,6 @@ import threading
 import sqlite3
 import os
 from UserFunctions import UserFunctions
-import hashlib
 
 
 class PublicTracker:
@@ -122,7 +121,7 @@ class PublicTracker:
                                                                                      dataFromPeer["fileVisibility"],
                                                                                      dataFromPeer["fileOwners"],
                                                                                      dataFromPeer["fileUploader"]),
-                                                                                     dataFromPeer["listOfHashes"])
+                                dataFromPeer["listOfHashes"])
                             filesConnection.commit()
                             filesConnection.close()
                             clientSocket.send(json.dumps({"status": "The file entered the database"}).encode())
@@ -196,9 +195,20 @@ class PublicTracker:
                             clientSocket.send(json.dumps(self.trackerInfo).encode())
                         case _:
                             print("got a unknown requestType. reminder: this is a PUBLIC tracker.")
-            except Exception as e:
+            except KeyError as e:
+                # This means that we got an illegal request.
+                print(e)
+                clientSocket.send(json.dumps({"errorMessage": "Couldn't send the data"}).encode())
                 peerInterested = False
-                print("Something went wrong on the server loop. dropping the connection " + str(e))
+            except ConnectionResetError as e:
+                # This means that something is wrong with the connection and we cant send an error message since it
+                # would throw another exception.
+                print(e)
+                peerInterested = False
+            except Exception as e:
+                # General exception just in case somthing unexpected happened
+                print(e)
+                peerInterested = False
 
 
 t = PublicTracker("IdoTracker", "TestTracker", "Ido")
