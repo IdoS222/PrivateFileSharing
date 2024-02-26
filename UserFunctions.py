@@ -191,6 +191,7 @@ class UserFunctions:
             else:
                 user = list(existingUsers[0])
                 del user[4]
+                del user[5]
                 return user
 
         except Exception as e:

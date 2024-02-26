@@ -1,0 +1,125 @@
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #ecf0f1;
+  color: #34495e;
+  overflow-x: hidden;
+}
+
+#top-bar {
+  background-color: #3498db;
+  color: #fff;
+  padding: 8px; /* Decreased top bar height */
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  z-index: 1000;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+#company-name {
+  flex-grow: 1;
+  text-align: center; /* Center the company name */
+}
+
+#company-name h2 {
+  margin: 0;
+  font-size: 18px; /* Decreased font size */
+}
+
+#top-bar-controls {
+  display: flex;
+  align-items: center;
+}
+
+#profile-btn {
+  padding: 8px 15px; /* Decreased button height */
+  background-color: transparent;
+  border: 1px solid #fff;
+  border-radius: 12px; /* Adjusted border-radius */
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#profile-btn:hover {
+  background-color: rgba(52, 152, 219, 0.3);
+}
+
+#sidebar {
+  background-color: #2c3e50;
+  color: #fff;
+  padding: 15px;
+  width: 200px; /* Decreased sidebar width */
+  position: fixed;
+  top: 150;
+  right: 0; /* Aligned the sidebar to the right */
+  height: 100%;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  z-index: 999;
+}
+
+#info-btn,
+#settings-btn,
+#download-btn {
+  padding: 10px 15px; /* Decreased button height */
+  text-align: center;
+  color: #fff;
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  background-color: #3498db;
+}
+
+#info-btn:hover,
+#settings-btn:hover,
+#download-btn:hover {
+  background-color: #2980b9;
+}
+
+#download-btn:disabled {
+  background-color: #e74c3c;
+  cursor: not-allowed;
+}
+
+#download-btn.enabled {
+  background-color: #2ecc71;
+  border-color: #27ae60;
+}
+
+#info-btn:disabled,
+#settings-btn:disabled {
+  background-color: #7f8c8d;
+  cursor: not-allowed;
+}
+
+#main-content {
+  padding: 20px;
+  margin-right: 220px; /* Increased right margin to account for the narrower sidebar */
+  margin-top: 60px; /* Adjusted top margin */
+}
+
+.file-info {
+  background-color: #fff;
+  border: 1px solid #3498db;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease;
+}
+
+.file-info:hover {
+  background-color: #f39c12;
+}
+.file-info:focus {
+  background-color: #f39c12; /* Highlight color when div is selected */
+}

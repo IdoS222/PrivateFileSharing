@@ -37,7 +37,6 @@ class PublicTracker:
                     fileVisibility TEXT,
                     fileOwners TEXT,
                     fileUploader TEXT,
-                    listOfHashes TEXT
             )""")
 
             newFilesConnection.commit()
@@ -120,8 +119,7 @@ class PublicTracker:
                                                                                      dataFromPeer["amountOfPieces"],
                                                                                      dataFromPeer["fileVisibility"],
                                                                                      dataFromPeer["fileOwners"],
-                                                                                     dataFromPeer["fileUploader"]),
-                                dataFromPeer["listOfHashes"])
+                                                                                     dataFromPeer["fileUploader"]))
                             filesConnection.commit()
                             filesConnection.close()
                             clientSocket.send(json.dumps({"status": "The file entered the database"}).encode())
@@ -138,7 +136,7 @@ class PublicTracker:
                                     json.dumps({"errorMessage": "file name doesnt match with the database"}).encode())
                                 continue
 
-                            clientSocket.send(json.dumps({"Peers": file[6], "listOfHashes": file[8]}).encode())
+                            clientSocket.send(json.dumps({"Peers": file[6]}).encode())
                         case 3:
                             # user finished downloading a file
                             filesConnection = sqlite3.connect("Databases/files.db")
@@ -177,8 +175,7 @@ class PublicTracker:
                             uploader = "{}:{}:{}:{}:{}".format(dataFromPeer["userID"], dataFromPeer["firstName"],
                                                                dataFromPeer["lastName"], dataFromPeer["email"],
                                                                dataFromPeer["rank"])
-                            if uploader != file[
-                                7]:  # This means the user that sent the request isn't the uploader and he cant delete the file
+                            if uploader != file[7]:  # This means the user that sent the request isn't the uploader and he cant delete the file
                                 clientSocket.send(json.dumps(
                                     {"errorMessage": "original uploader and request uploader arent matching"}).encode()
                                                   )
