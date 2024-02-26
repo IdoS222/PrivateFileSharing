@@ -1,7 +1,6 @@
 import socket
 import json
 
-
 class TrackerRequest:
     @staticmethod
     def get_files_from_tracker(tracker, user):
@@ -53,6 +52,7 @@ class TrackerRequest:
             "lastName": user["lastName"],
             "email": user["email"],
             "rank": user["rank"],
+            "fileName": fileName,
             "fileSize": fileSize,
             "pieceSize": pieceSize,
             "amountOfPieces": amountOfPieces,

@@ -13,9 +13,8 @@ class PeerServer:
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.MAX_CONNECTIONS = 1500
         self.serverAlive = False
-        self.StartPeerServer()
 
-    def StartPeerServer(self):
+    def start_peer_server(self):
         """
         Start the server and start waiting for connection
         :return: Nothing
@@ -27,12 +26,12 @@ class PeerServer:
             while self.serverAlive:
                 clientSocket, addr = self.serverSocket.accept()
                 print("new connection is made with {}".format(addr))
-                threading.Thread(target=self.ServerLoop, args=[clientSocket, ]).start()
+                threading.Thread(target=self.server_loop, args=[clientSocket, ]).start()
         except Exception as e:
             self.serverAlive = False
             print("Couldn't start the server. " + str(e))
 
-    def ServerLoop(self, clientSocket):
+    def server_loop(self, clientSocket):
         """
         The loop that will occur in a thread when a new connection is made with a client.
         :param clientSocket: The socket that the server automatically creates when a new connection is made.
@@ -72,9 +71,7 @@ class PeerServer:
                 print(e)
                 peerInterested = False
             except Exception as e:
-                # General exception just in case somthing unexpected happened
+                # General exception just in case something unexpected happened
                 print(e)
                 peerInterested = False
 
-
-p = PeerServer()
