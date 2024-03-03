@@ -186,16 +186,3 @@ class TrackerRequest:
         data = sock.recv(1024).decode()
         trackerData = json.loads(data)
         return trackerData
-
-    @staticmethod
-    def read_from_socket(socket):
-        """
-        Reading from a socket until empty.
-        :param socket: Socket.
-        :return: The data from the socket.
-        """
-        data = socket.recv(1024)
-        while data != b'':
-            print(data)
-            data += socket.recv(1024)
-        return data

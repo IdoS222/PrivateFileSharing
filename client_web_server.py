@@ -14,6 +14,7 @@ from TrackerRequests import TrackerRequest
 from PeerServer import PeerServer
 import concurrent.futures
 import ipaddress
+from SocketFunctions import SocketFunctions
 
 app = Flask(__name__, template_folder=os.path.join("www", "templates"),
             static_folder=os.path.join("www", "static"))  # App object
@@ -79,7 +80,7 @@ def register():
         "confirmPassword": request.values["confirmPassword"],
         "rank": "visitor"
     }).encode())
-    data = userSocket.recv(1024).decode()
+    data = SocketFunctions.read_from_socket(userSocket)
     jsonStatus = json.loads(data)
     try:
         if jsonStatus["status"] == "Successfully register the user {} to the database.".format(request.values["email"]):
@@ -108,7 +109,7 @@ def login():
             "password": request.values["password"],
         }).encode())
 
-        data = userSocket.recv(1024).decode()
+        data = SocketFunctions.read_from_socket(userSocket)
         loginJsonStatus = json.loads(data)
 
         userSocket.send(json.dumps({  # This is the request for getting the user info
@@ -116,7 +117,7 @@ def login():
             "email": request.values["email"],
         }).encode())
 
-        data = userSocket.recv(1024).decode()
+        data = SocketFunctions.read_from_socket(userSocket)
         userInfoStatus = json.loads(data)
 
         try:
@@ -155,7 +156,7 @@ def load_user(user_email):
         "email": user_email,
     }).encode())
 
-    data = userSocket.recv(1024).decode()
+    data = SocketFunctions.read_from_socket(userSocket)
     jsonStatus = json.loads(data)
     try:
         if jsonStatus["status"] == "The user doesnt exists":
@@ -218,7 +219,7 @@ def settings():
         "tracker": json.dumps({"ip": request.values["ipAddress"], "port": int(request.values["port"])})
     }).encode())
 
-    data = usersSocket.recv(1024).decode()
+    data = SocketFunctions.read_from_socket(usersSocket)
     jsonData = json.loads(data)
 
     try:
@@ -353,12 +354,7 @@ def download_piece_from_peer(addr, piece, pieceSize, fileName, path, hashlist):
         "fileName": fileName
     }
     sock.send(json.dumps(pieceRequest).encode())
-    buffer = ""
-    lenOfData = ""
-    while buffer != ".":
-        buffer = sock.recv(1).decode()
-        lenOfData += buffer
-    dataFromPeer = sock.recv(int(lenOfData[:-1])).decode()
+    dataFromPeer = SocketFunctions.read_from_socket(sock)
     jsonData = json.loads(dataFromPeer)
     chuckData = base64.b64decode(jsonData["data"])
     # Validate the piece
