@@ -1,6 +1,7 @@
 import socket
 import json
 
+
 class TrackerRequest:
     @staticmethod
     def get_files_from_tracker(tracker, user):
@@ -24,7 +25,8 @@ class TrackerRequest:
         sock.connect(tuple(tracker))
         sock.send(filesRequest.encode())
 
-        data = sock.recv(1024).decode()
+        data = TrackerRequest.read_from_socket(sock)  # TODO: read until empty
+        print(data)
         files = json.loads(data)
         return files
 
@@ -95,7 +97,7 @@ class TrackerRequest:
         sock.connect(tuple(tracker))
         sock.send(startDownloadRequest.encode())
 
-        data = sock.recv(1024).decode()
+        data = TrackerRequest.read_from_socket(sock)  # TODO: read until empty
         listOfPeers = json.loads(data)
         return listOfPeers
 
@@ -184,3 +186,16 @@ class TrackerRequest:
         data = sock.recv(1024).decode()
         trackerData = json.loads(data)
         return trackerData
+
+    @staticmethod
+    def read_from_socket(socket):
+        """
+        Reading from a socket until empty.
+        :param socket: Socket.
+        :return: The data from the socket.
+        """
+        data = socket.recv(1024)
+        while data != b'':
+            print(data)
+            data += socket.recv(1024)
+        return data

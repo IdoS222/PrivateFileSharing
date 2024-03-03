@@ -6,7 +6,8 @@ import random
 import string
 import threading
 import json
-# import argon2
+import argon2
+
 
 class UsersServer:
     port = 29574
@@ -15,7 +16,7 @@ class UsersServer:
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.MAX_CONNECTIONS = 1500
         self.serverAlive = False
-        self.databaseLocation = databaseLocation + "/d"
+        self.databaseLocation = databaseLocation + "/users.db"
 
     def start_users_server(self):
         """
@@ -47,26 +48,32 @@ class UsersServer:
             try:
                 data = clientSocket.recv(1024).decode()
                 if data:
+                    print(data)
                     dataFromPeer = json.loads(data)
                     match dataFromPeer["requestType"]:
                         case "registerUser":
-                            status = self.register_new_user(dataFromPeer["firstName"], dataFromPeer["lastName"], dataFromPeer["email"], dataFromPeer["password"], dataFromPeer["confirmPassword"], dataFromPeer["rank"])
-                            return status.encode()
+                            status = self.register_new_user(dataFromPeer["firstName"], dataFromPeer["lastName"],
+                                                            dataFromPeer["email"], dataFromPeer["password"],
+                                                            dataFromPeer["confirmPassword"], dataFromPeer["rank"])
+                            clientSocket.send(status.encode())
                         case "processLogin":
                             status = self.process_login(dataFromPeer["email"], dataFromPeer["password"])
-                            return status.encode()
+
+                            clientSocket.send(status.encode())
                         case "userExist":
-                            status = self.user_exists(dataFromPeer["userID"], dataFromPeer["firstName"], dataFromPeer["lastName"], dataFromPeer["email"], dataFromPeer["rank"])
-                            return status.encode()
+                            status = self.user_exists(dataFromPeer["userID"], dataFromPeer["firstName"],
+                                                      dataFromPeer["lastName"], dataFromPeer["email"],
+                                                      dataFromPeer["rank"])
+                            clientSocket.send(status.encode())
                         case "removeUser":
                             status = self.remove_user(dataFromPeer["email"])
-                            return status.encode()
+                            clientSocket.send(status.encode())
                         case "getUserInfo":
                             status = self.get_user_info(dataFromPeer["email"])
-                            return status.encode()
+                            clientSocket.send(status.encode())
                         case "changeTracker":
                             status = self.change_tracker(dataFromPeer["email"], dataFromPeer["tracker"])
-                            return status.encode()
+                            clientSocket.send(status.encode())
                 else:
                     continue
             except KeyError as e:
@@ -84,7 +91,6 @@ class UsersServer:
                 print(e)
                 peerInterested = False
 
-
     def register_new_user(self, firstName, lastName, email, password, confirmPassword, rank):
         """
         Adding a new user to the database if the user doesn't exist and if all the fields check out.
@@ -98,18 +104,18 @@ class UsersServer:
         """
         # Checking the values from the client
         if len(firstName) <= 2:
-            return "The first name is too short."
+            return json.dumps({"status": "The first name is too short."})
         if len(lastName) <= 2:
-            return "The last name if too short."
+            return json.dumps({"status": "The last name if too short."})
         if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-            return "The email is illegal."
+            return json.dumps({"status": "The email is illegal."})
         if len(password) <= 5:
-            return "The password is too short"
+            return json.dumps({"status": "The password is too short"})
         if password != confirmPassword:
-            return "The password and the confirm password dont match"
+            return json.dumps({"status": "The password and the confirm password dont match"})
 
         # Hash the password using the argon2 algorithm.
-        passHasher = #argon2.PasswordHasher()
+        passHasher = argon2.PasswordHasher()
         salt = ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase, k=32))
         passHash = passHasher.hash(password + salt)
 
@@ -121,15 +127,19 @@ class UsersServer:
                 email))  # Trying to check for users with the same email.
             existingUsers = usersCurser.fetchall()  # The result of the search
             if not existingUsers:  # if it goes into this condition, it means the list is empty and there is no user with this email, and we can proceed with adding the user to the database
-                command = "INSERT INTO users (firstName, lastName, email, passHash, rank, salt, tracker) VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}')"
-                usersCurser.execute(command.format(firstName, lastName, email, passHash, rank, salt))
+                command = "INSERT INTO users (firstName, lastName, email, passHash, rank, salt, tracker) VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}')".format(
+                    firstName, lastName, email, passHash, rank, salt, "No")
+                usersCurser.execute(command)
                 usersConnection.commit()
                 usersConnection.close()
                 return json.dumps({"status": "Successfully register the user {} to the database.".format(email)})
             else:
-                return json.dumps({"errorMessage": "There is a user with this email. please change the email or log in."})
+                return json.dumps(
+                    {"errorMessage": "There is a user with this email. please change the email or log in."})
         except Exception as e:
-            return json.dumps({"errorMessage": "Couldn't add the user {} from the database. Here is the error log: {}".format(firstName, str(e))})
+            return json.dumps({
+                "errorMessage": "Couldn't add the user {} from the database. Here is the error log: {}".format(
+                    firstName, str(e))})
 
     def process_login(self, email, password):
         """
@@ -140,7 +150,7 @@ class UsersServer:
         """
 
         # Hash the password using the argon2 algorithm.
-        passHasher = #argon2.PasswordHasher()
+        passHasher = argon2.PasswordHasher()
 
         try:
             usersConnection = sqlite3.connect(self.databaseLocation)
@@ -156,7 +166,7 @@ class UsersServer:
                 try:
                     password = password + existingUsers[0][6]  # add the salt to the password
                     passHasher.verify(existingUsers[0][4], password)  # verify the password
-                    return json.dumps({"status":"Successful login."})
+                    return json.dumps({"status": "Successful login."})
                 except Exception:
                     return json.dumps({"errorMessage": "The password is wrong."})
         except Exception as e:
@@ -209,7 +219,9 @@ class UsersServer:
                 email))  # Trying to check for users with the same email.
             existingUsers = usersCurser.fetchall()  # The result of the search
             if not existingUsers or len(existingUsers) >= 2:
-                return json.dumps({"status": "There is no user in the database with the email {} or there is more then one user with this email.".format(email)})
+                return json.dumps({
+                    "status": "There is no user in the database with the email {} or there is more then one user with this email.".format(
+                        email)})
             else:
                 usersCurser.execute("DELETE FROM users WHERE email = '{}'".format(email))
                 usersConnection.commit()
@@ -237,6 +249,7 @@ class UsersServer:
                 user = list(existingUsers[0])
                 del user[4]
                 del user[5]
+                print(user)
                 return json.dumps({"status": user})
 
         except Exception as e:
@@ -261,7 +274,10 @@ class UsersServer:
             if not existingUsers or len(existingUsers) >= 2:
                 return json.dumps({"status": "The user doesnt exists"})
             else:
-                usersCurser.execute("UPDATE files SET tracker = '{}' WHERE email = {}".format(tracker,email))
+                print("UPDATE users SET tracker = '{}' WHERE email = '{}'".format(tracker, email))
+                usersCurser.execute("UPDATE users SET tracker = '{}' WHERE email = '{}'".format(tracker, email))
+                usersConnection.commit()
+                usersConnection.close()
                 return json.dumps({"status": "tracker set"})
         except Exception as e:
             print("couldn't check if the user exists " + str(e))
@@ -291,3 +307,9 @@ class UsersServer:
 
             usersConnection.commit()
             usersConnection.close()
+
+        print("done")
+
+
+u = UsersServer("Databases")
+u.start_users_server()

@@ -3,14 +3,14 @@ import socket
 import threading
 import sqlite3
 import os
-from UserFunctions import UserFunctions
 
 
 class PublicTracker:
     ip = "0.0.0.0"
     port = 6987
+    usersServerLocation = ("127.0.0.1", 29574)
 
-    def __init__(self, trackerName, trackerDescription, trackerOwner):
+    def __init__(self, trackerName="Unknown", trackerDescription="Unknown", trackerOwner="Unknown"):
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.MAX_CONNECTIONS = 1500
         self.serverAlive = False
@@ -67,9 +67,28 @@ class PublicTracker:
                 if jsonData:
                     dataFromPeer = json.loads(jsonData)
                     # check if the user exists
-                    if not UserFunctions.user_exists(dataFromPeer["userID"], dataFromPeer["firstName"],
-                                                     dataFromPeer["lastName"], dataFromPeer["email"],
-                                                     dataFromPeer["rank"]):
+                    usersSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    usersSocket.connect(self.usersServerLocation)
+
+                    usersSocket.send(json.dumps({
+                        "requestType": "userExist",
+                        "userID": dataFromPeer["userID"],
+                        "firstName": dataFromPeer["firstName"],
+                        "lastName": dataFromPeer["lastName"],
+                        "email": dataFromPeer["email"],
+                        "rank": dataFromPeer["rank"]
+                    }).encode())
+
+                    existsJson = usersSocket.recv(1024).decode()
+                    existsDict = json.loads(existsJson)
+
+                    try:  # Checking if the user is a real user.
+                        if existsDict["status"] != "The user exists":
+                            clientSocket.send(
+                                json.dumps({"errorMessage": "Verification failed with this user"}).encode())
+                            peerInterested = False
+                            continue
+                    except KeyError:
                         clientSocket.send(json.dumps({"errorMessage": "Verification failed with this user"}).encode())
                         peerInterested = False
                         continue
@@ -208,5 +227,5 @@ class PublicTracker:
                 peerInterested = False
 
 
-t = PublicTracker("IdoTracker", "TestTracker", "Ido")
+t = PublicTracker()
 t.StartPublicTracker()

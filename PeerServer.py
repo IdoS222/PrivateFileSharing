@@ -74,4 +74,3 @@ class PeerServer:
                 # General exception just in case something unexpected happened
                 print(e)
                 peerInterested = False
-

@@ -9,7 +9,7 @@ body {
 #top-bar {
   background-color: #3498db;
   color: #fff;
-  padding: 8px; /* Decreased top bar height */
+  padding: 8px;
   text-align: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   width: 100%;
@@ -21,12 +21,12 @@ body {
 
 #company-name {
   flex-grow: 1;
-  text-align: center; /* Center the company name */
+  text-align: center;
 }
 
 #company-name h2 {
   margin: 0;
-  font-size: 18px; /* Decreased font size */
+  font-size: 18px;
 }
 
 #top-bar-controls {
@@ -35,10 +35,10 @@ body {
 }
 
 #profile-btn {
-  padding: 8px 15px; /* Decreased button height */
+  padding: 8px 15px;
   background-color: transparent;
   border: 1px solid #fff;
-  border-radius: 12px; /* Adjusted border-radius */
+  border-radius: 12px;
   color: #fff;
   cursor: pointer;
   transition: background-color 0.3s ease;
@@ -52,10 +52,10 @@ body {
   background-color: #2c3e50;
   color: #fff;
   padding: 15px;
-  width: 200px; /* Decreased sidebar width */
+  width: 200px;
   position: fixed;
   top: 150;
-  right: 0; /* Aligned the sidebar to the right */
+  right: 0;
   height: 100%;
   box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -64,10 +64,8 @@ body {
   z-index: 999;
 }
 
-#info-btn,
-#settings-btn,
 #download-btn {
-  padding: 10px 15px; /* Decreased button height */
+  padding: 10px 15px;
   text-align: center;
   color: #fff;
   text-decoration: none;
@@ -79,8 +77,6 @@ body {
   background-color: #3498db;
 }
 
-#info-btn:hover,
-#settings-btn:hover,
 #download-btn:hover {
   background-color: #2980b9;
 }
@@ -95,16 +91,10 @@ body {
   border-color: #27ae60;
 }
 
-#info-btn:disabled,
-#settings-btn:disabled {
-  background-color: #7f8c8d;
-  cursor: not-allowed;
-}
-
 #main-content {
   padding: 20px;
-  margin-right: 220px; /* Increased right margin to account for the narrower sidebar */
-  margin-top: 60px; /* Adjusted top margin */
+  margin-right: 220px;
+  margin-top: 60px;
 }
 
 .file-info {
@@ -121,5 +111,83 @@ body {
   background-color: #f39c12;
 }
 .file-info:focus {
-  background-color: #f39c12; /* Highlight color when div is selected */
+  background-color: #f39c12;
+}
+
+#uploadFilesButton {
+  position: fixed;
+  top: 80px; /* Adjust the top value based on your top bar height */
+  left: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px; /* Adjust padding to make the button a bit bigger */
+  z-index: 1001; /* Adjust the z-index value as needed */
+  transition: background-color 0.3s ease; /* Add transition effect for hover */
+}
+#refreshButton {
+  position: fixed;
+  top: 80px; /* Adjust the top value based on your top bar height */
+  left: 70px; /* Adjust the right value for top right positioning */
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px; /* Adjust padding to make the button a bit bigger */
+  z-index: 1001; /* Adjust the z-index value as needed */
+  transition: background-color 0.3s ease; /* Add transition effect for hover */
+}
+#infoButton {
+  position: fixed;
+  top: 80px; /* Adjust the top value based on your top bar height */
+  left: 130px; /* Adjust the right value for top right positioning */
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px; /* Adjust padding to make the button a bit bigger */
+  z-index: 1001; /* Adjust the z-index value as needed */
+  transition: background-color 0.3s ease; /* Add transition effect for hover */
+}
+#settingsButton {
+  position: fixed;
+  top: 80px; /* Adjust the top value based on your top bar height */
+  left: 190px; /* Adjust the right value for top right positioning */
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px; /* Adjust padding to make the button a bit bigger */
+  z-index: 1001; /* Adjust the z-index value as needed */
+  transition: background-color 0.3s ease; /* Add transition effect for hover */
+}
+
+#uploadFilesButton img,
+#refreshButton img,
+#infoButton img,
+#settingsButton img {
+  width: 40px; /* Adjust the size as needed */
+  height: auto;
+}
+
+#uploadFilesButton,
+#refreshButton,
+#infoButton,
+#settingsButton {
+  position: fixed;
+  background: none;
+  border: 1px solid #000; /* Black border */
+  cursor: pointer;
+  padding: 5px; /* Adjust padding to make the button a bit bigger */
+  z-index: 1001; /* Adjust the z-index value as needed */
+  transition: background-color 0.3s ease; /* Add transition effect for hover */
+}
+
+#uploadFilesButton:hover,
+#refreshButton:hover,
+#infoButton:hover,
+#settingsButton:hover {
+  background-color: rgba(0, 0, 0, 0.1); /* Darken the background on hover */
+}
+.separator-line {
+  border: 2px solid #000; /* Black line */
+  width: 100%;
+  margin-top: 60px; /* Adjust the top margin as needed */
 }

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Company Name</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/application.css') }}">
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <div id="top-bar">
+    <div id="company-name">
+      <h2>The name for this fucking project</h2>
+    </div>
+    <div id="top-bar-controls">
+      <button class="btn" id="profile-btn">Profile</button>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <form id="Download" method="POST" action="">
+      <button class="btn" id="download-btn">Download</button>
+    </form>
+  </div>
+
+  <!-- Main Content -->
+  <div id="main-content">
+    <form id="uploadFilesForm" method="POST" action="/upload">
+      <button type="submit" class="btn" id="uploadFilesButton">
+        <img src="{{ url_for('static', filename='Images/uploadImg.jpg') }}" alt="Upload Image">
+      </button>
+    </form>
+    <form id="refreshButtonForm" method="POST" action="">
+      <button type="submit" class="btn" id="refreshButton">
+        <img src="{{ url_for('static', filename='Images/refreshImg.jpg') }}" alt="Refresh">
+      </button>
+    </form>
+    <form id="infoButtonForm" method="POST" action="">
+      <button type="submit" class="btn" id="infoButton">
+        <img src="{{ url_for('static', filename='Images/infoImg.jpg') }}" alt="Refresh">
+      </button>
+    </form>
+    <form id="settingsButtonForm" method="GET" action="/settings">
+      <button type="submit" class="btn" id="settingsButton">
+        <img src="{{ url_for('static', filename='Images/settingsImg.jpg') }}" alt="Refresh">
+      </button>
+    </form>
+    <hr class="separator-line"> <!-- Add a horizontal line as a separator -->
+    {% if files|length > 0 %}
+      {% for file in files %}
+        <div class="file-info" tabindex="0">
+          <p>File name: {{ file[1] }}. File size: {{ file[2] }}</p>
+        </div>
+      {% endfor %}
+    {% endif %}
+  </div>

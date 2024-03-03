@@ -17,12 +17,12 @@
             <label for="port">Port</label>
             <input type="number" id="port" name="port" placeholder="Enter Port" required>
 
-            <button type="submit" id="updateSettingsButton">Update Settings</button>
+            <button type="submit" id="updateSettingsButton">Update Tracker</button>
         </form>
 
-        <form id="logoutForm" method="post" action="/logout">
-            <button type="button" id="logoutButton">Logout</button>
-        </form>
+        <form id="logoutForm" method="post" action="{{ url_for('logout') }}">
+            <button type="submit" id="logoutButton">Logout</button>
+        </form >
     </div>
 </body>
 </html>

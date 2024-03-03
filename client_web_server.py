@@ -2,8 +2,8 @@ import base64
 import json
 import socket
 import threading
-import flask
 import hashlib
+from tkinter import filedialog
 import flask_login
 from flask_login import LoginManager
 from flask import Flask, render_template, request, redirect
@@ -12,6 +12,8 @@ import subprocess
 from User import User
 from TrackerRequests import TrackerRequest
 from PeerServer import PeerServer
+import concurrent.futures
+import ipaddress
 
 app = Flask(__name__, template_folder=os.path.join("www", "templates"),
             static_folder=os.path.join("www", "static"))  # App object
@@ -20,8 +22,8 @@ login_manager = LoginManager()  # Login manager object
 login_manager.init_app(app)
 login_manager.session_protection = "strong"
 filesFolder = r"C:\Users\owner\Desktop\Test2"
-activeTracker = []
 usersServerLocation = ("127.0.0.1", 29574)
+activeUser = None
 
 
 @app.route('/')
@@ -29,12 +31,24 @@ def index():
     return render_template("index.html")
 
 
-@app.route('/application')
+@app.route('/application', methods=['GET', 'POST'])
 @flask_login.login_required
 def application():
-    # trackerData = TrackerRequest.get_tracker_data(tuple(activeTracker), flask_login.current_user.__dict__)
-    # filesFromTracker = TrackerRequest.get_files_from_tracker(tuple(activeTracker), flask_login.current_user.__dict__)
-    return render_template("application.html", files=[{"name": "naga", "size": 123}, {"name": "nogi", "size": 1234}])
+    if request.method == "GET":
+        if flask_login.current_user.__dict__["tracker"] != "No":
+            try:
+                print(tuple(flask_login.current_user.__dict__["tracker"]))
+                trackerData = TrackerRequest.get_tracker_data(tuple(flask_login.current_user.__dict__["tracker"]),
+                                                              flask_login.current_user.__dict__)
+                filesFromTracker = TrackerRequest.get_files_from_tracker(
+                    tuple(flask_login.current_user.__dict__["tracker"]),
+                    flask_login.current_user.__dict__)
+                return render_template("application.html", files=filesFromTracker, trackerData=trackerData)
+            except ConnectionRefusedError:
+                # Send the application template with a message that we couldn't connect to the tracker.
+                return render_template("application.html")
+        else:
+            return render_template("application.html")
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -54,7 +68,6 @@ def register():
         return render_template("tough_guy.html")
 
     # Trying to register the user in the database after verifying the values we got.
-
     userSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     userSocket.connect(usersServerLocation)
     userSocket.send(json.dumps({  # This is the request for registering a new user
@@ -66,18 +79,12 @@ def register():
         "confirmPassword": request.values["confirmPassword"],
         "rank": "visitor"
     }).encode())
-
     data = userSocket.recv(1024).decode()
-
     jsonStatus = json.loads(data)
-
     try:
         if jsonStatus["status"] == "Successfully register the user {} to the database.".format(request.values["email"]):
-            flask_login.login_user(
-                User(request.values["firstName"], request.values["lastName"], request.values["email"], "visitor",
-                     "None"), remember=True)
             return redirect('/application')
-    except KeyError:  # If we get in here we got a error message from the server and the registration failed
+    except KeyError:  # If we get in here we got an error message from the server and the registration failed
         return jsonStatus["errorMessage"]
 
 
@@ -119,13 +126,18 @@ def login():
                         # If we got here we also got the info from the server, and we can finally log in
                         user = userInfoStatus["status"]  # The list of all the user info
                         # Update the active tracker
-                        flask_login.login_user(User(), remember=True)
+                        tracker = "No"
+                        if user[5] != "No":
+                            trackerDict = json.loads(user[5])
+                            tracker = [trackerDict["ip"], trackerDict["port"]]
+                        flask_login.login_user(User(user[0], user[1], user[2], user[3], user[4], tracker),
+                                               remember=True)
                         return redirect('/application')
                     else:
-                        # if we got here we didn't get the user info but the user probably doesn't exists
+                        # if we got here we didn't get the user info, but the user probably doesn't exist
                         return "The user doesnt exists"
                 except KeyError:
-                    # If we got here we got a error message from the get user info request.
+                    # If we got here, we got an error message from the get user info request.
                     return userInfoStatus["errorMessage"]
         except KeyError:  # If we get in here we got an error message from the server and the login failed
             return loginJsonStatus["errorMessage"]
@@ -144,15 +156,19 @@ def load_user(user_email):
     }).encode())
 
     data = userSocket.recv(1024).decode()
-
     jsonStatus = json.loads(data)
     try:
         if jsonStatus["status"] == "The user doesnt exists":
             return None  # The user doesn't exist, and we need to send None
 
         found_user = jsonStatus["status"]
-        return User(found_user[0], found_user[1], found_user[2], found_user[3], found_user[4], activeTracker)
-    except KeyError:  # we got a error message from the server
+        if found_user[5] == "No":
+            return User(found_user[0], found_user[1], found_user[2], found_user[3], found_user[4],
+                        "No")
+        tracker = json.loads(found_user[5])
+        return User(found_user[0], found_user[1], found_user[2], found_user[3], found_user[4],
+                    (tracker["ip"], tracker["port"]))
+    except KeyError:  # we got an error message from the server
         return None
 
 
@@ -164,8 +180,9 @@ def unauthorized_callback():  # This handler is called when trying to access the
 
 @app.route("/logout")
 def logout():  # handling the logout
-    flask_login.logout_user()
-    return redirect("/")
+    if request.method == "POST":
+        flask_login.logout_user()
+        return redirect("/login")
 
 
 @app.route("/settings", methods=["GET", "POST"])
@@ -174,111 +191,189 @@ def settings():
     if request.method == "GET":
         return render_template("settings.html")
 
+    try:
+        print(request.values["ipAddress"])
+        print(request.values["port"])
+    except KeyError:
+        return render_template("tough_guy.html")
 
-def download_file(fileID, fileName, pieceSize, amountOfPieces, path):
+    # Checking the values of the tracker change request.
+    try:
+        ipObj = ipaddress.ip_address(request.values["ipAddress"])
+        # If we got here without an exception thrown, the ip address is valid
+        if int(request.values["port"]) > 65535:
+            # The port isn't valid
+            return redirect("application.html")
+    except ValueError:
+        # The ip given is not an ip address.
+        print("Ip address isn't valid.")
+        return redirect("application.html")
+
+    usersSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    usersSocket.connect(usersServerLocation)
+
+    usersSocket.send(json.dumps({
+        "requestType": "changeTracker",
+        "email": flask_login.current_user.__dict__["email"],
+        "tracker": json.dumps({"ip": request.values["ipAddress"], "port": int(request.values["port"])})
+    }).encode())
+
+    data = usersSocket.recv(1024).decode()
+    jsonData = json.loads(data)
+
+    try:
+        if jsonData["status"] == "tracker set":
+            activeTracker = [(request.values["ipAddress"], int(request.values["port"]))]
+            flask_login.current_user.__dict__["tracker"] = activeTracker
+            print(flask_login.current_user.__dict__["tracker"])
+            return redirect("/application")
+        else:
+            # problem setting the tracker
+            print(jsonData)
+    except KeyError:
+        # error while setting the tracker
+        print(jsonData)
+
+    return render_template("tough_guy.html")
+
+
+@app.route('/upload', methods=["POST"])
+def upload():
+    if request.method != "POST":
+        # We don't want to get a get request for here.
+        return redirect("/login")
+
+    pathToFile = filedialog.askopenfilename(title="Select a file to upload to the tracker",
+                                            filetypes=[("All files", "*.*")])  # Not stable?
+    # File name, fileSize, ask for file visibility.
+    fileName = os.path.basename(pathToFile)
+    fileSize = os.stat(pathToFile).st_size
+    if fileSize < 10000:  # If the file is less than 10 KB,
+        # there is no reason to split it into the standard 1000 pieces,
+        # and we will split it into 10 pieces 1KB each
+        amountOfPieces = 10
+    else:
+        amountOfPieces = 1000
+    pieceSize = fileSize / amountOfPieces
+    fileVisibility = "visitor"  # TODO: Change that to ask the user.
+    fileOwner = [socket.gethostbyname(socket.gethostname()), 15674]
+    fileOwners = json.dumps({"Peers": list(fileOwner)})
+    fileUploader = json.dumps(flask_login.current_user.__dict__)
+
+    # Connect to the tracker and send him the new file
+    requestStatus = TrackerRequest.upload_file_to_tracker(flask_login.current_user.__dict__["tracker"],
+                                                          flask_login.current_user.__dict__, fileName,
+                                                          fileSize, pieceSize, amountOfPieces, fileVisibility,
+                                                          fileOwners, fileUploader)
+    try:
+        if requestStatus["status"] == "success":
+            # Notify the user that the upload went smoothly.
+            return redirect("/application")
+
+        # Notify that something went wrong
+        return redirect("/application")
+    except KeyError:
+        # Notify that something went wrong
+        return redirect("/application")
+
+
+def download(tracker, numPieces, pieceSize, fileName, fileID, downloadPath, hashList):
     """
-    Downloading a file.
-    :param fileID: The id of the file in the database.
+    Downloading a file from the peers.
+    :param fileID: The id of the file.
+    :param tracker: The tracker we are downloading the file from.
+    :param numPieces: The number of pieces that make up the file.
+    :param pieceSize: The size of each piece.
     :param fileName: The name of the file.
-    :param pieceSize: The size of one piece.
-    :param amountOfPieces: The number of pieces needed to create a file.
-    :param path: Where to download the file to.
-    :return: True if the download succeeded and false if it isn't.
+    :param downloadPath: Where to download the file to.
+    :param hashList: A list of hashes to all the pieces.
+    :return: Nothing
     """
 
-    # Sending another request to the tracker in-case the amount of owners is different and to get the list of hashes
-    fileOwners = TrackerRequest.start_download(activeTracker, flask_login.current_user.__dict__, fileID, fileName)
-    pieces = []
+    def find_another_peer(current_peer):
+        """
+        Find another peer to download the piece from.
+        :param current_peer: The current peer.
+        :return: Another peer.
+        """
+        return next(peer for peer in peerList if peer != current_peer)
 
-    for piece in range(amountOfPieces):
-        pieces.append(piece)
+    peerList = TrackerRequest.start_download(tracker, flask_login.current_user.__dict__, fileID, fileName)
 
-    piecesPerOwner = len(pieces) // len(fileOwners)
-    remainingPieces = len(pieces) % len(fileOwners)
+    piecesPerPeer = numPieces // len(peerList)
+    remainingPieces = numPieces % len(peerList)
 
-    distribution = {owner: [] for owner in fileOwners}  # Distribution of the pieces between owners
+    with concurrent.futures.ThreadPoolExecutor():
+        for i, peer in enumerate(peerList):
+            startPiece = i * piecesPerPeer + min(i, remainingPieces)
+            endPiece = startPiece + piecesPerPeer + (1 if i < remainingPieces else 0)
 
-    threads = []
-    pieceIndex = 0
-    for owner in fileOwners:
-        # Distribute equal pieces to each owner
-        thread_pieces_indices = list(range(pieceIndex, pieceIndex + piecesPerOwner))
-        t = threading.Thread(target=download_pieces_from_peer,
-                             args=(owner, thread_pieces_indices, pieceSize, fileName, path))
-        t.start()
-        threads.append(t)
-        distribution[owner].extend(thread_pieces_indices)
-        pieceIndex += piecesPerOwner
+            for pieceIndex in range(startPiece, endPiece):
+                print(f"Downloading piece {pieceIndex} from {peer}.")
+                success = download_piece_from_peer(peer, pieceIndex, pieceSize, fileName, downloadPath, hashList)
 
-        # Distribute remaining pieces if any
-        if remainingPieces > 0:
-            remaining_piece_index = pieceIndex
-            t = threading.Thread(target=download_pieces_from_peer,
-                                 args=(owner, [remaining_piece_index], pieces, pieceSize, fileName, path))
-            t.start()
-            threads.append(t)
-            distribution[owner].append(remaining_piece_index)
-            pieceIndex += 1
-            remainingPieces -= 1
+                while not success:
+                    retryPeer = find_another_peer(peer)
+                    if retryPeer:
+                        print(f"Retrying piece {pieceIndex} with {retryPeer}.")
+                        success = download_piece_from_peer(retryPeer, pieceIndex, pieceSize, fileName, downloadPath,
+                                                           hashList)
+                    else:
+                        print(f"All retries failed for piece {pieceIndex}. Moving on to the next piece.")
 
-    for thread in threads:
-        thread.join()
-
+    # The process of merging all the files.
     fileData = b''
     # Merge all the small files to one large file.
-    for piece in range(amountOfPieces):
-        with open("{}/{}{}".format(path, piece, fileName), "rb") as pieceFile:
+    for piece in range(numPieces):
+        with open("{}/{}{}".format(downloadPath, piece, fileName), "rb") as pieceFile:
             pieceData = pieceFile.read()
         fileData += pieceData
-        os.remove("{}/{}{}".format(path, piece, fileName))
+        os.remove("{}/{}{}".format(downloadPath, piece, fileName))
 
-    with open("{}/{}".format(path, fileName), "wb") as file:
+    with open("{}/{}".format(downloadPath, fileName), "wb") as file:
         file.write(fileData)
 
 
-def download_pieces_from_peer(addr, piecesToDownload, pieceSize, fileName, path, listOfHashes):
+def download_piece_from_peer(addr, piece, pieceSize, fileName, path, hashlist):
     """
-    Downloading all the pieces the function is instructed to from the peer on the addr.
+    Downloading the piece, the function is instructed to from the peer on the addr.
     :param path: Where to download the file to.
     :param addr: The address of the peer.
-    :param piecesToDownload: The pieces we need to download
+    :param piece: The piece we need to download
     :param pieceSize: The size of each piece.
     :param fileName: The name of the file.
-    :return: Nothing.
+    :return: True if the piece is downloaded and verified and false if it isn't.
     """
-
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(tuple(addr))
-    for piece in piecesToDownload:
-        pieceRequest = {
-            "requestType": "downloadPart",
-            "pieceNumber": piece,
-            "pieceSize": pieceSize,
-            "fileName": fileName
-        }
-        sock.send(json.dumps(pieceRequest).encode())
-        buffer = ""
-        lenOfData = ""
-        while buffer != ".":
-            buffer = sock.recv(1).decode()
-            lenOfData += buffer
-        dataFromPeer = sock.recv(int(lenOfData[:-1])).decode()
-        jsonData = json.loads(dataFromPeer)
-        chuckData = base64.b64decode(jsonData["data"])
-        # Validate the piece
-        chuckHash = hashlib.sha256(chuckData)
-        if chuckHash != listOfHashes[piece]:
-            # We didn't get the correct data from the piece, and we need to download it from another peer.
-            print("we got a broken piece. index:{}".format(piece))
-            continue
-        with open("{}/{}{}".format(path, piece, fileName), "wb") as file:
-            subprocess.run(["attrib", "+H", "{}/{}{}".format(path, piece, fileName)], check=True)
-            file.write(chuckData)
+    pieceRequest = {
+        "requestType": "downloadPart",
+        "pieceNumber": piece,
+        "pieceSize": pieceSize,
+        "fileName": fileName
+    }
+    sock.send(json.dumps(pieceRequest).encode())
+    buffer = ""
+    lenOfData = ""
+    while buffer != ".":
+        buffer = sock.recv(1).decode()
+        lenOfData += buffer
+    dataFromPeer = sock.recv(int(lenOfData[:-1])).decode()
+    jsonData = json.loads(dataFromPeer)
+    chuckData = base64.b64decode(jsonData["data"])
+    # Validate the piece
+    chuckHash = hashlib.sha256(chuckData).hexdigest()
+    if chuckHash != hashlist[piece]:
+        # We didn't get the correct data from the piece, and we need to download it from another peer.
+        return False
+    with open("{}/{}{}".format(path, piece, fileName), "wb") as file:
+        subprocess.run(["attrib", "+H", "{}/{}{}".format(path, piece, fileName)], check=True)
+        file.write(chuckData)
 
-        return True
+    return True
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pServer = PeerServer()
-    threading.Thread(target=pServer.start_peer_server, args=[]).start()
+    threading.Thread(target=pServer.start_peer_server).start()
     app.run(host="0.0.0.0", port=80)
