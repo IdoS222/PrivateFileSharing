@@ -110,9 +110,6 @@ body {
 .file-info:hover {
   background-color: #f39c12;
 }
-.file-info:focus {
-  background-color: #f39c12;
-}
 
 #uploadFilesButton {
   position: fixed;

@@ -15,6 +15,7 @@ from PeerServer import PeerServer
 import concurrent.futures
 import ipaddress
 from SocketFunctions import SocketFunctions
+from tkinter import Tk
 
 app = Flask(__name__, template_folder=os.path.join("www", "templates"),
             static_folder=os.path.join("www", "static"))  # App object
@@ -71,7 +72,7 @@ def register():
     # Trying to register the user in the database after verifying the values we got.
     userSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     userSocket.connect(usersServerLocation)
-    userSocket.send(json.dumps({  # This is the request for registering a new user
+    SocketFunctions.send_data(userSocket, json.dumps({  # This is the request for registering a new user
         "requestType": "registerUser",
         "firstName": request.values["firstName"],
         "lastName": request.values["lastName"],
@@ -79,7 +80,7 @@ def register():
         "password": request.values["password"],
         "confirmPassword": request.values["confirmPassword"],
         "rank": "visitor"
-    }).encode())
+    }))
     data = SocketFunctions.read_from_socket(userSocket)
     jsonStatus = json.loads(data)
     try:
@@ -103,19 +104,19 @@ def login():
     try:
         userSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         userSocket.connect(usersServerLocation)
-        userSocket.send(json.dumps({  # This is the request for registering a new user
+        SocketFunctions.send_data(userSocket, json.dumps({  # This is the request for registering a new user
             "requestType": "processLogin",
             "email": request.values["email"],
             "password": request.values["password"],
-        }).encode())
+        }))
 
         data = SocketFunctions.read_from_socket(userSocket)
         loginJsonStatus = json.loads(data)
 
-        userSocket.send(json.dumps({  # This is the request for getting the user info
+        SocketFunctions.send_data(userSocket, json.dumps({  # This is the request for getting the user info
             "requestType": "getUserInfo",
             "email": request.values["email"],
-        }).encode())
+        }))
 
         data = SocketFunctions.read_from_socket(userSocket)
         userInfoStatus = json.loads(data)
@@ -151,10 +152,10 @@ def load_user(user_email):
     # Search user email in db
     userSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     userSocket.connect(usersServerLocation)
-    userSocket.send(json.dumps({  # This is the request for registering a new user
+    SocketFunctions.send_data(userSocket, json.dumps({  # This is the request for registering a new user
         "requestType": "getUserInfo",
         "email": user_email,
-    }).encode())
+    }))
 
     data = SocketFunctions.read_from_socket(userSocket)
     jsonStatus = json.loads(data)
@@ -181,9 +182,12 @@ def unauthorized_callback():  # This handler is called when trying to access the
 
 @app.route("/logout")
 def logout():  # handling the logout
-    if request.method == "POST":
-        flask_login.logout_user()
+    if request.method != "POST":
+        # We don't want to get a get request for here.
         return redirect("/login")
+
+    flask_login.logout_user()
+    return redirect("/login")
 
 
 @app.route("/settings", methods=["GET", "POST"])
@@ -194,7 +198,6 @@ def settings():
 
     try:
         print(request.values["ipAddress"])
-        print(request.values["port"])
     except KeyError:
         return render_template("tough_guy.html")
 
@@ -202,9 +205,6 @@ def settings():
     try:
         ipObj = ipaddress.ip_address(request.values["ipAddress"])
         # If we got here without an exception thrown, the ip address is valid
-        if int(request.values["port"]) > 65535:
-            # The port isn't valid
-            return redirect("application.html")
     except ValueError:
         # The ip given is not an ip address.
         print("Ip address isn't valid.")
@@ -213,11 +213,11 @@ def settings():
     usersSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     usersSocket.connect(usersServerLocation)
 
-    usersSocket.send(json.dumps({
+    SocketFunctions.send_data(usersSocket.send, json.dumps({
         "requestType": "changeTracker",
         "email": flask_login.current_user.__dict__["email"],
-        "tracker": json.dumps({"ip": request.values["ipAddress"], "port": int(request.values["port"])})
-    }).encode())
+        "tracker": json.dumps({"ip": request.values["ipAddress"], "port": 6987})
+    }))
 
     data = SocketFunctions.read_from_socket(usersSocket)
     jsonData = json.loads(data)
@@ -244,9 +244,10 @@ def upload():
         # We don't want to get a get request for here.
         return redirect("/login")
 
-    pathToFile = filedialog.askopenfilename(title="Select a file to upload to the tracker",
-                                            filetypes=[("All files", "*.*")])  # Not stable?
-    # File name, fileSize, ask for file visibility.
+    root = Tk()
+    root.withdraw()
+    root.call('wm', 'attributes', '.', '-topmost', True)
+    pathToFile = filedialog.askopenfilename(title="Select a file to upload to the tracker.")
     fileName = os.path.basename(pathToFile)
     fileSize = os.stat(pathToFile).st_size
     if fileSize < 10000:  # If the file is less than 10 KB,
@@ -278,7 +279,16 @@ def upload():
         return redirect("/application")
 
 
-def download(tracker, numPieces, pieceSize, fileName, fileID, downloadPath, hashList):
+@app.route('/refresh', methods=["POST"])
+def refresh():
+    if request.method != "POST":
+        # We don't want to get a get request for here.
+        return redirect("/login")
+
+    return redirect("/application")  # That simple?
+
+
+def download(tracker, numPieces, pieceSize, fileName, fileID):
     """
     Downloading a file from the peers.
     :param fileID: The id of the file.
@@ -286,8 +296,6 @@ def download(tracker, numPieces, pieceSize, fileName, fileID, downloadPath, hash
     :param numPieces: The number of pieces that make up the file.
     :param pieceSize: The size of each piece.
     :param fileName: The name of the file.
-    :param downloadPath: Where to download the file to.
-    :param hashList: A list of hashes to all the pieces.
     :return: Nothing
     """
 
@@ -299,7 +307,9 @@ def download(tracker, numPieces, pieceSize, fileName, fileID, downloadPath, hash
         """
         return next(peer for peer in peerList if peer != current_peer)
 
-    peerList = TrackerRequest.start_download(tracker, flask_login.current_user.__dict__, fileID, fileName)
+    dataFromTracker = TrackerRequest.start_download(tracker, flask_login.current_user.__dict__, fileID, fileName)
+    peerList = dataFromTracker["Peers"]
+    hashList = dataFromTracker["listOfHashes"]
 
     piecesPerPeer = numPieces // len(peerList)
     remainingPieces = numPieces % len(peerList)
@@ -310,28 +320,25 @@ def download(tracker, numPieces, pieceSize, fileName, fileID, downloadPath, hash
             endPiece = startPiece + piecesPerPeer + (1 if i < remainingPieces else 0)
 
             for pieceIndex in range(startPiece, endPiece):
-                print(f"Downloading piece {pieceIndex} from {peer}.")
-                success = download_piece_from_peer(peer, pieceIndex, pieceSize, fileName, downloadPath, hashList)
+                success = download_piece_from_peer(peer, pieceIndex, pieceSize, fileName, filesFolder, hashList)
 
                 while not success:
                     retryPeer = find_another_peer(peer)
                     if retryPeer:
-                        print(f"Retrying piece {pieceIndex} with {retryPeer}.")
-                        success = download_piece_from_peer(retryPeer, pieceIndex, pieceSize, fileName, downloadPath,
+                        success = download_piece_from_peer(retryPeer, pieceIndex, pieceSize, fileName, filesFolder,
                                                            hashList)
                     else:
-                        print(f"All retries failed for piece {pieceIndex}. Moving on to the next piece.")
-
+                        pass
     # The process of merging all the files.
     fileData = b''
     # Merge all the small files to one large file.
     for piece in range(numPieces):
-        with open("{}/{}{}".format(downloadPath, piece, fileName), "rb") as pieceFile:
+        with open("{}/{}{}".format(filesFolder, piece, fileName), "rb") as pieceFile:
             pieceData = pieceFile.read()
         fileData += pieceData
-        os.remove("{}/{}{}".format(downloadPath, piece, fileName))
+        os.remove("{}/{}{}".format(filesFolder, piece, fileName))
 
-    with open("{}/{}".format(downloadPath, fileName), "wb") as file:
+    with open("{}/{}".format(filesFolder, fileName), "wb") as file:
         file.write(fileData)
 
 
@@ -353,7 +360,7 @@ def download_piece_from_peer(addr, piece, pieceSize, fileName, path, hashlist):
         "pieceSize": pieceSize,
         "fileName": fileName
     }
-    sock.send(json.dumps(pieceRequest).encode())
+    SocketFunctions.send_data(sock, json.dumps(pieceRequest))
     dataFromPeer = SocketFunctions.read_from_socket(sock)
     jsonData = json.loads(dataFromPeer)
     chuckData = base64.b64decode(jsonData["data"])

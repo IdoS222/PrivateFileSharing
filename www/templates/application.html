@@ -32,7 +32,7 @@
         <img src="{{ url_for('static', filename='Images/uploadImg.jpg') }}" alt="Upload Image">
       </button>
     </form>
-    <form id="refreshButtonForm" method="POST" action="">
+    <form id="refreshButtonForm" method="POST" action="/refresh">
       <button type="submit" class="btn" id="refreshButton">
         <img src="{{ url_for('static', filename='Images/refreshImg.jpg') }}" alt="Refresh">
       </button>
@@ -50,7 +50,7 @@
     <hr class="separator-line"> <!-- Add a horizontal line as a separator -->
     {% if files|length > 0 %}
       {% for file in files %}
-        <div class="file-info" tabindex="0">
+        <div class="file-info">
           <p>File name: {{ file[1] }}. File size: {{ file[2] }}</p>
         </div>
       {% endfor %}

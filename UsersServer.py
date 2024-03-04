@@ -6,7 +6,8 @@ import random
 import string
 import threading
 import json
-import argon2
+import hashlib
+from SocketFunctions import SocketFunctions
 
 
 class UsersServer:
@@ -46,40 +47,39 @@ class UsersServer:
         peerInterested = True
         while peerInterested:
             try:
-                data = clientSocket.recv(1024).decode()
+                data = SocketFunctions.read_from_socket(clientSocket)
                 if data:
-                    print(data)
                     dataFromPeer = json.loads(data)
                     match dataFromPeer["requestType"]:
                         case "registerUser":
                             status = self.register_new_user(dataFromPeer["firstName"], dataFromPeer["lastName"],
                                                             dataFromPeer["email"], dataFromPeer["password"],
                                                             dataFromPeer["confirmPassword"], dataFromPeer["rank"])
-                            clientSocket.send(status.encode())
+                            SocketFunctions.send_data(clientSocket, status)
                         case "processLogin":
                             status = self.process_login(dataFromPeer["email"], dataFromPeer["password"])
 
-                            clientSocket.send(status.encode())
+                            SocketFunctions.send_data(clientSocket, status)
                         case "userExist":
                             status = self.user_exists(dataFromPeer["userID"], dataFromPeer["firstName"],
                                                       dataFromPeer["lastName"], dataFromPeer["email"],
                                                       dataFromPeer["rank"])
-                            clientSocket.send(status.encode())
+                            SocketFunctions.send_data(clientSocket, status)
                         case "removeUser":
                             status = self.remove_user(dataFromPeer["email"])
-                            clientSocket.send(status.encode())
+                            SocketFunctions.send_data(clientSocket, status)
                         case "getUserInfo":
                             status = self.get_user_info(dataFromPeer["email"])
-                            clientSocket.send(status.encode())
+                            SocketFunctions.send_data(clientSocket, status)
                         case "changeTracker":
                             status = self.change_tracker(dataFromPeer["email"], dataFromPeer["tracker"])
-                            clientSocket.send(status.encode())
+                            SocketFunctions.send_data(clientSocket, status)
                 else:
                     continue
             except KeyError as e:
                 # This means that we got an illegal request.
                 print(e)
-                clientSocket.send(json.dumps({"errorMessage": "Couldn't send the data"}).encode())
+                SocketFunctions.send_data(clientSocket, (json.dumps({"errorMessage": "Couldn't send the data"})))
                 peerInterested = False
             except ConnectionResetError as e:
                 # This means that something is wrong with the connection and we cant send an error message since it
@@ -114,10 +114,9 @@ class UsersServer:
         if password != confirmPassword:
             return json.dumps({"status": "The password and the confirm password dont match"})
 
-        # Hash the password using the argon2 algorithm.
-        passHasher = argon2.PasswordHasher()
+        # Hash the password using SHA-256 from hashlib
         salt = ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase, k=32))
-        passHash = passHasher.hash(password + salt)
+        passHash = hashlib.sha256((password + salt).encode('utf-8')).hexdigest()
 
         try:  # registering the user in the database
             usersConnection = sqlite3.connect(self.databaseLocation)
@@ -149,9 +148,7 @@ class UsersServer:
         :return: True if the login is successful and false if it isn't
         """
 
-        # Hash the password using the argon2 algorithm.
-        passHasher = argon2.PasswordHasher()
-
+        # Hash the password using SHA-256 from hashlib
         try:
             usersConnection = sqlite3.connect(self.databaseLocation)
             usersCurser = usersConnection.cursor()
@@ -164,9 +161,11 @@ class UsersServer:
                 return json.dumps({"errorMessage": "The user doesnt exists"})
             else:
                 try:
-                    password = password + existingUsers[0][6]  # add the salt to the password
-                    passHasher.verify(existingUsers[0][4], password)  # verify the password
-                    return json.dumps({"status": "Successful login."})
+                    hashed_password = hashlib.sha256((password + existingUsers[0][6]).encode('utf-8')).hexdigest()
+                    if existingUsers[0][4] != hashed_password:
+                        return json.dumps({"errorMessage": "The password is wrong."})
+                    else:
+                        return json.dumps({"status": "Successful login."})
                 except Exception:
                     return json.dumps({"errorMessage": "The password is wrong."})
         except Exception as e:

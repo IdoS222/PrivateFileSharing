@@ -1,5 +1,6 @@
 import socket
 import json
+from SocketFunctions import SocketFunctions
 
 
 class TrackerRequest:
@@ -23,10 +24,9 @@ class TrackerRequest:
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(tuple(tracker))
-        sock.send(filesRequest.encode())
+        SocketFunctions.send_data(sock, filesRequest)
 
-        data = TrackerRequest.read_from_socket(sock)  # TODO: read until empty
-        print(data)
+        data = SocketFunctions.read_from_socket(sock)  # TODO: read until empty
         files = json.loads(data)
         return files
 
@@ -65,9 +65,9 @@ class TrackerRequest:
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(tuple(tracker))
-        sock.send(newFileRequest.encode())
+        SocketFunctions.send_data(sock, newFileRequest)
 
-        data = sock.recv(1024).decode()
+        data = SocketFunctions.read_from_socket(sock)
         status = json.loads(data)
         return status
 
@@ -95,7 +95,7 @@ class TrackerRequest:
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(tuple(tracker))
-        sock.send(startDownloadRequest.encode())
+        SocketFunctions.send_data(sock, startDownloadRequest)
 
         data = TrackerRequest.read_from_socket(sock)  # TODO: read until empty
         listOfPeers = json.loads(data)
@@ -125,9 +125,9 @@ class TrackerRequest:
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(tuple(tracker))
-        sock.send(finishDownloadRequest.encode())
+        SocketFunctions.send_data(sock, finishDownloadRequest)
 
-        data = sock.recv(1024).decode()
+        data = SocketFunctions.read_from_socket(sock)
         status = json.loads(data)
         return status
 
@@ -155,9 +155,9 @@ class TrackerRequest:
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(tuple(tracker))
-        sock.send(finishDownloadRequest.encode())
+        SocketFunctions.send_data(sock, finishDownloadRequest)
 
-        data = sock.recv(1024).decode()
+        data = SocketFunctions.read_from_socket(sock)
         status = json.loads(data)
         return status
 
@@ -181,8 +181,8 @@ class TrackerRequest:
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(tuple(tracker))
-        sock.send(dataRequest.encode())
+        SocketFunctions.send_data(sock, dataRequest)
 
-        data = sock.recv(1024).decode()
+        data = SocketFunctions.read_from_socket(sock)
         trackerData = json.loads(data)
         return trackerData
