@@ -307,8 +307,6 @@ class UsersServer:
             usersConnection.commit()
             usersConnection.close()
 
-        print("done")
-
 
 u = UsersServer("Databases")
 u.start_users_server()

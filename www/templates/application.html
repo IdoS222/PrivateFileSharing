@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/application.css') }}">
 </head>
 <body>
-
   <!-- Top Bar -->
   <div id="top-bar">
     <div id="company-name">
@@ -20,9 +19,7 @@
 
   <!-- Sidebar -->
   <div id="sidebar">
-    <form id="Download" method="POST" action="">
-      <button class="btn" id="download-btn">Download</button>
-    </form>
+    <button class="btn" id="download-btn" onclick="downloadSelectedFile()">Download</button>
   </div>
 
   <!-- Main Content -->
@@ -47,12 +44,23 @@
         <img src="{{ url_for('static', filename='Images/settingsImg.jpg') }}" alt="Refresh">
       </button>
     </form>
+    <form id="removeButtonForm" method="GET" action="/remove">
+      <button type="submit" class="btn" id="removeButton">
+        <img src="{{ url_for('static', filename='Images/removeImg.jpg') }}" alt="Refresh">
+      </button>
+    </form>
     <hr class="separator-line"> <!-- Add a horizontal line as a separator -->
-    {% if files|length > 0 %}
-      {% for file in files %}
-        <div class="file-info">
+    <div id="file-container" class="scroll-container">
+      {% if files|length > 0 %}
+        {% for file in files %}
+        <div class="file-info" data-file-name="{{ file[1] }}" data-file-size="{{ file[2] }}" >
           <p>File name: {{ file[1] }}. File size: {{ file[2] }}</p>
         </div>
-      {% endfor %}
-    {% endif %}
+        {% endfor %}
+      {% endif %}
+    </div>
   </div>
+
+  <script src="{{ url_for('static', filename='js/divFunctionality.js') }}"></script>
+</body>
+</html>

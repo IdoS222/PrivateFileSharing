@@ -110,17 +110,20 @@ body {
 .file-info:hover {
   background-color: #f39c12;
 }
+.selected {
+  background-color: #f39c12;
+}
 
 #uploadFilesButton {
   position: fixed;
-  top: 80px; /* Adjust the top value based on your top bar height */
+  top: 80px;
   left: 10px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 5px; /* Adjust padding to make the button a bit bigger */
-  z-index: 1001; /* Adjust the z-index value as needed */
-  transition: background-color 0.3s ease; /* Add transition effect for hover */
+  padding: 5px;
+  z-index: 1001;
+  transition: background-color 0.3s ease;
 }
 #refreshButton {
   position: fixed;
@@ -155,11 +158,22 @@ body {
   z-index: 1001; /* Adjust the z-index value as needed */
   transition: background-color 0.3s ease; /* Add transition effect for hover */
 }
-
+#removeButton {
+  position: fixed;
+  top: 80px; /* Adjust the top value based on your top bar height */
+  right: 250px; /* Adjust the right value for top right positioning */
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px; /* Adjust padding to make the button a bit bigger */
+  z-index: 1001; /* Adjust the z-index value as needed */
+  transition: background-color 0.3s ease; /* Add transition effect for hover */
+}
 #uploadFilesButton img,
 #refreshButton img,
 #infoButton img,
-#settingsButton img {
+#settingsButton img,
+#removeButton img {
   width: 40px; /* Adjust the size as needed */
   height: auto;
 }
@@ -167,7 +181,8 @@ body {
 #uploadFilesButton,
 #refreshButton,
 #infoButton,
-#settingsButton {
+#settingsButton,
+#removeButton {
   position: fixed;
   background: none;
   border: 1px solid #000; /* Black border */
@@ -180,11 +195,16 @@ body {
 #uploadFilesButton:hover,
 #refreshButton:hover,
 #infoButton:hover,
-#settingsButton:hover {
+#settingsButton:hover,
+#removeButton:hover {
   background-color: rgba(0, 0, 0, 0.1); /* Darken the background on hover */
 }
 .separator-line {
   border: 2px solid #000; /* Black line */
   width: 100%;
   margin-top: 60px; /* Adjust the top margin as needed */
+}
+.scroll-container {
+  max-height: 900px; /* Adjust the maximum height as needed */
+  overflow-y: auto;
 }

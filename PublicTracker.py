@@ -91,7 +91,8 @@ class PublicTracker:
                             peerInterested = False
                             continue
                     except KeyError:
-                        SocketFunctions.send_data(clientSocket, json.dumps({"errorMessage": "Verification failed with this user"}))
+                        SocketFunctions.send_data(clientSocket,
+                                                  json.dumps({"errorMessage": "Verification failed with this user"}))
                         peerInterested = False
                         continue
                     match dataFromPeer["requestType"]:
@@ -112,10 +113,15 @@ class PublicTracker:
                                     filesCurser.execute(
                                         "SELECT * FROM files WHERE NOT fileVisibility = 'admin' AND NOT fileVisibility = 'manager' AND NOT fileVisibility = 'worker'")
                                 case _:
-                                    filesCurser.execute("SELECT * FROM file WHERE fileVisibility = 'fuck you'")
-
+                                    #What?
+                                    pass
                             allFiles = filesCurser.fetchall()
-                            SocketFunctions.send_data(clientSocket, json.dumps(allFiles))
+                            filesToSend = list()
+                            for file in allFiles:
+                                fileList = list(file)
+                                fileList.pop(8)
+                                filesToSend.append(fileList)
+                            SocketFunctions.send_data(clientSocket, json.dumps(filesToSend))
                         case 1:
                             # upload a new file
                             filesConnection = sqlite3.connect("Databases/files.db")
@@ -123,25 +129,28 @@ class PublicTracker:
 
                             if dataFromPeer["fileSize"] > 1000000000:  # The file size limit for now is 1 GB
                                 SocketFunctions.send_data(clientSocket,
-                                    json.dumps({
-                                        "errorMessage": "piece size times the amount of pieces doesnt equals to the file size."}))
+                                                          json.dumps({
+                                                              "errorMessage": "The file is bigger then 1GB."}))
                                 continue
 
                             if dataFromPeer["pieceSize"] * dataFromPeer["amountOfPieces"] != dataFromPeer["fileSize"]:
+                                print(dataFromPeer["pieceSize"])
+                                print(dataFromPeer["amountOfPieces"])
+                                print(dataFromPeer["fileSize"])
                                 SocketFunctions.send_data(clientSocket,
-                                    json.dumps({
-                                        "errorMessage": "piece size times the amount of pieces doesnt equals to the file size."}))
+                                                          json.dumps({
+                                                              "errorMessage": "piece size times the amount of pieces doesnt equals to the file size."}))
                                 continue
                             filesCurser.execute(
                                 "INSERT INTO files (fileName, fileSize, pieceSize, amountOfPieces, fileVisibility, fileOwners, fileUploader, listOfHashes) "
-                                "VALUES ('{}', {}, {}, {}, '{}', '{}', '{}')".format(dataFromPeer["fileName"],
+                                "VALUES ('{}', {}, {}, {}, '{}', '{}', '{}', '{}')".format(dataFromPeer["fileName"],
                                                                                      dataFromPeer["fileSize"],
                                                                                      dataFromPeer["pieceSize"],
                                                                                      dataFromPeer["amountOfPieces"],
                                                                                      dataFromPeer["fileVisibility"],
                                                                                      dataFromPeer["fileOwners"],
-                                                                                     dataFromPeer["fileUploader"]),
-                                                                                    dataFromPeer["listOfHashes"])
+                                                                                     dataFromPeer["fileUploader"],
+                                                                                    dataFromPeer["listOfHashes"]))
                             filesConnection.commit()
                             filesConnection.close()
                             SocketFunctions.send_data(clientSocket, json.dumps({"status": "The file entered the database"}))
@@ -155,10 +164,12 @@ class PublicTracker:
 
                             if file[1] != dataFromPeer["fileName"]:  # Checking that the file id and name match
                                 SocketFunctions.send_data(clientSocket,
-                                    json.dumps({"errorMessage": "file name doesnt match with the database"}))
+                                                          json.dumps({
+                                                                         "errorMessage": "file name doesnt match with the database"}))
                                 continue
 
-                            SocketFunctions.send_data(clientSocket, json.dumps({"Peers": file[6], "listOfHashes": file[8]}))
+                            SocketFunctions.send_data(clientSocket,
+                                                      json.dumps({"Peers": file[6], "listOfHashes": file[8]}))
                         case 3:
                             # user finished downloading a file
                             filesConnection = sqlite3.connect("Databases/files.db")
@@ -169,7 +180,8 @@ class PublicTracker:
 
                             if file[1] != dataFromPeer["fileName"]:  # Checking that the file id and name match
                                 SocketFunctions.send_data(clientSocket,
-                                    json.dumps({"errorMessage": "file name doesnt match with the database"}))
+                                                          json.dumps({
+                                                                         "errorMessage": "file name doesnt match with the database"}))
                                 continue
 
                             previousOwners = json.loads(file[6])  # getting the owners
@@ -191,7 +203,8 @@ class PublicTracker:
 
                             if file[1] != dataFromPeer["fileName"]:  # Checking that the file id and name match
                                 SocketFunctions.send_data(clientSocket,
-                                    json.dumps({"errorMessage": "file name doesnt match with the database"}))
+                                                          json.dumps({
+                                                                         "errorMessage": "file name doesnt match with the database"}))
                                 continue
 
                             uploader = "{}:{}:{}:{}:{}".format(dataFromPeer["userID"], dataFromPeer["firstName"],

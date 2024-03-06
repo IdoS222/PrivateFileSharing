@@ -26,13 +26,13 @@ class TrackerRequest:
         sock.connect(tuple(tracker))
         SocketFunctions.send_data(sock, filesRequest)
 
-        data = SocketFunctions.read_from_socket(sock)  # TODO: read until empty
+        data = SocketFunctions.read_from_socket(sock)
         files = json.loads(data)
         return files
 
     @staticmethod
     def upload_file_to_tracker(tracker, user, fileName, fileSize, pieceSize, amountOfPieces, fileVisibility, fileOwners,
-                               fileUploader):
+                               fileUploader, listOfHashes):
         """
         Sending a new file to the tracker.
         :param tracker: The tracker address [ip, port].
@@ -40,10 +40,11 @@ class TrackerRequest:
         :param fileName: The name of the file.
         :param fileSize: The size of the file.
         :param pieceSize: The size of one piece.
-        :param amountOfPieces: The amount of pieces that make the file.
+        :param amountOfPieces: The number of pieces that make the file.
         :param fileVisibility: The visibility of the file.
         :param fileOwners: The owners of the file. (a list of address that has the complete file)
         :param fileUploader: The uploader of the file.
+        :param listOfHashes: A list of hashes of all the pieces.
         :return: A json dump of the status of the request
         """
 
@@ -60,7 +61,8 @@ class TrackerRequest:
             "amountOfPieces": amountOfPieces,
             "fileVisibility": fileVisibility,
             "fileOwners": fileOwners,
-            "fileUploader": fileUploader
+            "fileUploader": fileUploader,
+            "listOfHashes": listOfHashes
         })
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -97,7 +99,7 @@ class TrackerRequest:
         sock.connect(tuple(tracker))
         SocketFunctions.send_data(sock, startDownloadRequest)
 
-        data = TrackerRequest.read_from_socket(sock)  # TODO: read until empty
+        data = SocketFunctions.read_from_socket(sock)
         listOfPeers = json.loads(data)
         return listOfPeers
 

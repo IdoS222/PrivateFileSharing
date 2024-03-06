@@ -49,7 +49,7 @@ class PeerServer:
                         with open(pathToFile, 'rb') as file:  # opening the file
                             file.seek(int(dataFromPeer["pieceNumber"]) * int(dataFromPeer["pieceSize"]))  # jumping to the part of the file, the peer is interested in.
                             index = 0
-                            data = bytes()
+                            data = b''
                             while index < dataFromPeer["pieceSize"]:  # reading only the part we need and stopping after we finish reading it
                                 data += file.read(1)
                                 index += 1

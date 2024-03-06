@@ -11,15 +11,21 @@ class SocketFunctions:
         while buffer != ".":
             buffer = sock.recv(1).decode()
             lenOfData += buffer
-        return sock.recv(int(lenOfData[:-1])).decode()
+
+        data_length = int(lenOfData[:-1])
+        received_data = ""
+        while len(received_data) < data_length:
+            received_data += sock.recv(data_length - len(received_data)).decode()
+
+        return received_data
 
     @staticmethod
     def send_data(sock, data):
         """
         Sending all the data with a buffer that is the length of the data.
-        :param sock: 
-        :param data:
-        :return:
+        :param sock: The socket to send data to.
+        :param data: The data to be sent.
+        :return: None
         """
-        messageToClient = "{}.{}".format(len(data), data).encode()
-        sock.send(messageToClient)
+        message_to_client = "{}.{}".format(len(data), data).encode()
+        sock.send(message_to_client)
