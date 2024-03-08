@@ -53,7 +53,7 @@
     <div id="file-container" class="scroll-container">
       {% if files|length > 0 %}
         {% for file in files %}
-        <div class="file-info" data-file-name="{{ file[1] }}" data-file-size="{{ file[2] }}" >
+        <div class="file-info" onclick="selectDiv(this)" data-fileID="{{ file[0] }}" data-fileName="{{ file[1] }}" data-pieceSize="{{ file[3] }}" data-numOfPieces="{{ file[4] }}">
           <p>File name: {{ file[1] }}. File size: {{ file[2] }}</p>
         </div>
         {% endfor %}

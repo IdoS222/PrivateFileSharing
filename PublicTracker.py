@@ -113,7 +113,7 @@ class PublicTracker:
                                     filesCurser.execute(
                                         "SELECT * FROM files WHERE NOT fileVisibility = 'admin' AND NOT fileVisibility = 'manager' AND NOT fileVisibility = 'worker'")
                                 case _:
-                                    #What?
+                                    # What?
                                     pass
                             allFiles = filesCurser.fetchall()
                             filesToSend = list()
@@ -144,16 +144,20 @@ class PublicTracker:
                             filesCurser.execute(
                                 "INSERT INTO files (fileName, fileSize, pieceSize, amountOfPieces, fileVisibility, fileOwners, fileUploader, listOfHashes) "
                                 "VALUES ('{}', {}, {}, {}, '{}', '{}', '{}', '{}')".format(dataFromPeer["fileName"],
-                                                                                     dataFromPeer["fileSize"],
-                                                                                     dataFromPeer["pieceSize"],
-                                                                                     dataFromPeer["amountOfPieces"],
-                                                                                     dataFromPeer["fileVisibility"],
-                                                                                     dataFromPeer["fileOwners"],
-                                                                                     dataFromPeer["fileUploader"],
-                                                                                    dataFromPeer["listOfHashes"]))
+                                                                                           dataFromPeer["fileSize"],
+                                                                                           dataFromPeer["pieceSize"],
+                                                                                           dataFromPeer[
+                                                                                               "amountOfPieces"],
+                                                                                           dataFromPeer[
+                                                                                               "fileVisibility"],
+                                                                                           dataFromPeer["fileOwners"],
+                                                                                           dataFromPeer["fileUploader"],
+                                                                                           dataFromPeer[
+                                                                                               "listOfHashes"]))
                             filesConnection.commit()
                             filesConnection.close()
-                            SocketFunctions.send_data(clientSocket, json.dumps({"status": "The file entered the database"}))
+                            SocketFunctions.send_data(clientSocket,
+                                                      json.dumps({"status": "The file entered the database"}))
                         case 2:
                             # A user is stating a download and requesting the list of peers and a list of hashes
                             filesConnection = sqlite3.connect("Databases/files.db")
@@ -165,11 +169,13 @@ class PublicTracker:
                             if file[1] != dataFromPeer["fileName"]:  # Checking that the file id and name match
                                 SocketFunctions.send_data(clientSocket,
                                                           json.dumps({
-                                                                         "errorMessage": "file name doesnt match with the database"}))
+                                                              "errorMessage": "file name doesnt match with the database"}))
                                 continue
 
+
                             SocketFunctions.send_data(clientSocket,
-                                                      json.dumps({"Peers": file[6], "listOfHashes": file[8]}))
+                                                      json.dumps({"Peers": json.loads(file[6])["Peers"],
+                                                                  "listOfHashes": json.loads(file[8])}))
                         case 3:
                             # user finished downloading a file
                             filesConnection = sqlite3.connect("Databases/files.db")
@@ -181,11 +187,11 @@ class PublicTracker:
                             if file[1] != dataFromPeer["fileName"]:  # Checking that the file id and name match
                                 SocketFunctions.send_data(clientSocket,
                                                           json.dumps({
-                                                                         "errorMessage": "file name doesnt match with the database"}))
+                                                              "errorMessage": "file name doesnt match with the database"}))
                                 continue
 
                             previousOwners = json.loads(file[6])  # getting the owners
-                            owner = (addr[0], 15674)
+                            owner = addr[0]
                             newOwners = json.dumps(previousOwners.append(owner))
                             filesConnection.execute("UPDATE files SET fileOwners = '{}' WHERE id = {}".format(newOwners,
                                                                                                               dataFromPeer[
@@ -204,7 +210,7 @@ class PublicTracker:
                             if file[1] != dataFromPeer["fileName"]:  # Checking that the file id and name match
                                 SocketFunctions.send_data(clientSocket,
                                                           json.dumps({
-                                                                         "errorMessage": "file name doesnt match with the database"}))
+                                                              "errorMessage": "file name doesnt match with the database"}))
                                 continue
 
                             uploader = "{}:{}:{}:{}:{}".format(dataFromPeer["userID"], dataFromPeer["firstName"],

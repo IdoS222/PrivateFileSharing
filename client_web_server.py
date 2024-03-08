@@ -12,7 +12,6 @@ import subprocess
 from User import User
 from TrackerRequests import TrackerRequest
 from PeerServer import PeerServer
-import concurrent.futures
 import ipaddress
 from SocketFunctions import SocketFunctions
 from tkinter import Tk
@@ -259,34 +258,27 @@ def upload():
         amountOfPieces = 1000
     pieceSize = fileSize / amountOfPieces
     fileVisibility = "visitor"  # TODO: Change that to ask the user.
-    fileOwner = [socket.gethostbyname(socket.gethostname()), 15674]
-    fileOwners = json.dumps({"Peers": list(fileOwner)})
+    fileOwner = socket.gethostbyname(socket.gethostname())
+    peerList = []
+    peerList.append(fileOwner)
+    fileOwners = json.dumps({"Peers": peerList})
     fileUploader = json.dumps(flask_login.current_user.__dict__)
     # Initialize an empty list to store piece hashes
     hashes_list = []
 
-    # Open the file in binary mode
     with open(pathToFile, 'rb') as file:
-        # Read the entire content of the file
         file_content = file.read()
-
-        # Calculate the size of each piece
         total_size = len(file_content)
         piece_size = total_size // amountOfPieces
 
-        # Ensure that each piece has the same size
         for i in range(amountOfPieces):
             start_idx = i * piece_size
             end_idx = (i + 1) * piece_size
-            # For the last piece, take the remaining content
             piece_data = file_content[start_idx:end_idx] if i != amountOfPieces - 1 else file_content[start_idx:]
 
-            # Calculate the SHA-256 hash of the piece data
             hash_object = hashlib.sha256()
             hash_object.update(piece_data)
             piece_hash = hash_object.hexdigest()
-
-            # Append the hash to the list
             hashes_list.append(piece_hash)
 
     hashes_list = json.dumps({
@@ -315,8 +307,11 @@ def upload():
 @app.route('/download', methods=["POST"])
 def download():
     data = request.data.decode()
-    fileData = json.loads(data)
-    print(type(fileData["fileInfo"]))
+    fileData = json.loads(data)["fileInfo"]
+    download_file(flask_login.current_user.__dict__["tracker"], fileData["fileID"], fileData["fileName"],
+                  int(fileData["numOfPieces"]), int(fileData["pieceSize"]))
+
+    # TODO:WHAT TO DO AFTER DOWNLOADING THE FILE
 
 
 @app.route('/refresh', methods=["POST"])
@@ -328,51 +323,33 @@ def refresh():
     return redirect("/application")  # That simple?
 
 
-def download_file(tracker, numPieces, pieceSize, fileName, fileID):
-    """
-    Downloading a file from the peers.
-    :param fileID: The id of the file.
-    :param tracker: The tracker we are downloading the file from.
-    :param numPieces: The number of pieces that make up the file.
-    :param pieceSize: The size of each piece.
-    :param fileName: The name of the file.
-    :return: Nothing
-    """
-
-    def find_another_peer(current_peer):
-        """
-        Find another peer to download the piece from.
-        :param current_peer: The current peer.
-        :return: Another peer.
-        """
-        return next(peer for peer in peerList if peer != current_peer)
-
+def download_file(tracker, fileID, fileName, amountOfPieces, pieceSize):
     dataFromTracker = TrackerRequest.start_download(tracker, flask_login.current_user.__dict__, fileID, fileName)
+    # TODO: verify info from the tracker.
     peerList = dataFromTracker["Peers"]
-    hashList = dataFromTracker["listOfHashes"]
+    hashList = dataFromTracker["listOfHashes"]["hashes"]
 
-    piecesPerPeer = numPieces // len(peerList)
-    remainingPieces = numPieces % len(peerList)
+    threads = []
+    answerList = []
 
-    with concurrent.futures.ThreadPoolExecutor():
-        for i, peer in enumerate(peerList):
-            startPiece = i * piecesPerPeer + min(i, remainingPieces)
-            endPiece = startPiece + piecesPerPeer + (1 if i < remainingPieces else 0)
+    for pieceNum in range(amountOfPieces):
+        thread = threading.Thread(target=download_piece_from_peer,
+                                  args=(peerList, pieceNum, pieceSize, fileName, filesFolder, hashList, answerList))
+        threads.append(thread)
+        thread.start()
 
-            for pieceIndex in range(startPiece, endPiece):
-                success = download_piece_from_peer(peer, pieceIndex, pieceSize, fileName, filesFolder, hashList)
+    for thread in threads:
+        thread.join()
 
-                while not success:
-                    retryPeer = find_another_peer(peer)
-                    if retryPeer:
-                        success = download_piece_from_peer(retryPeer, pieceIndex, pieceSize, fileName, filesFolder,
-                                                           hashList)
-                    else:
-                        pass
+    for answer in answerList:
+        if not answer:
+            # If one of the answers is false, it means we didn't download one of the pieces. Notify the user and return
+            return
+
     # The process of merging all the files.
     fileData = b''
     # Merge all the small files to one large file.
-    for piece in range(numPieces):
+    for piece in range(amountOfPieces):
         with open("{}/{}{}".format(filesFolder, piece, fileName), "rb") as pieceFile:
             pieceData = pieceFile.read()
         fileData += pieceData
@@ -382,40 +359,38 @@ def download_file(tracker, numPieces, pieceSize, fileName, fileID):
         file.write(fileData)
 
 
-def download_piece_from_peer(addr, pieceNum, pieceSize, fileName, path, hashlist):
-    """
-    Downloading the piece, the function is instructed to from the peer on the addr.
-    :param path: Where to download the file to.
-    :param addr: The address of the peer.
-    :param pieceNum: The piece we need to download
-    :param pieceSize: The size of each piece.
-    :param fileName: The name of the file.
-    :return: True if the piece is downloaded and verified and false if it isn't.
-    """
+def download_piece_from_peer(owners, pieceNum, pieceSize, fileName, path, hashlist, answerList):
     try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect(tuple(addr))
-        pieceRequest = {
-            "requestType": "downloadPart",
-            "pieceNumber": pieceNum,
-            "pieceSize": pieceSize,
-            "fileName": fileName
-        }
-        SocketFunctions.send_data(sock, json.dumps(pieceRequest))
-        dataFromPeer = SocketFunctions.read_from_socket(sock)
-        jsonData = json.loads(dataFromPeer)
-        chuckData = base64.b64decode(jsonData["data"])
-        # Validate the piece
-        chuckHash = hashlib.sha256(chuckData).hexdigest()
-        if chuckHash != hashlist[pieceNum]:
-            # We didn't get the correct data from the piece, and we need to download it from another peer.
-            return False
-        with open("{}/{}{}".format(path, pieceNum, fileName), "wb") as file:
-            subprocess.run(["attrib", "+H", "{}/{}{}".format(path, pieceNum, fileName)], check=True)
-            file.write(chuckData)
-
-        return True
-    except Exception:
+        for owner in owners:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((owner, 15674))
+            pieceRequest = {
+                "requestType": "downloadPart",
+                "pieceNumber": pieceNum,
+                "pieceSize": pieceSize,
+                "fileName": fileName
+            }
+            SocketFunctions.send_data(sock, json.dumps(pieceRequest))
+            dataFromPeer = SocketFunctions.read_from_socket(sock)
+            jsonData = json.loads(dataFromPeer)
+            chuckData = base64.b64decode(jsonData["data"])
+            # Validate the piece
+            chuckHash = hashlib.sha256(chuckData).hexdigest()
+            if chuckHash != hashlist[pieceNum]:
+                # We didn't get the correct data from the piece, and we need to download it from another peer.
+                continue
+            else:
+                with open("{}/{}{}".format(path, pieceNum, fileName), "wb") as file:
+                    subprocess.run(["attrib", "+H", "{}/{}{}".format(path, pieceNum, fileName)], check=True)
+                    file.write(chuckData)
+                    answerList.append(True)
+                    return True
+        # If we couldn't download the piece from any owner, we will return false
+        answerList.append(False)
+        return False
+    except Exception as e:  # If there is an exception, we will return false
+        print(e)
+        answerList.append(False)
         return False
 
 

@@ -1,4 +1,3 @@
-const fileElements = document.querySelectorAll('.file-info');
 let selectedDiv = null
 
 function selectDiv(div) {
@@ -7,22 +6,32 @@ function selectDiv(div) {
   }
 
   selectedDiv = div;
-  selectedDiv.classList.add('selected');
+  selectedDiv.classList.add('selected'); //We are adding this class so we can change the background color when we click on a div.
 
 }
 
 function downloadSelectedFile() {
   if (selectedDiv) {
-    const fileInfo = selectedDiv.querySelector('p').textContent;
-    console.log(fileInfo)
+    const fileID = selectedDiv.getAttribute('data-fileID');
+    const fileName = selectedDiv.getAttribute('data-fileName');
+    const pieceSize = selectedDiv.getAttribute('data-pieceSize');
+    const numOfPieces = selectedDiv.getAttribute('data-numOfPieces');
 
-    // Send file information to a Python script using Fetch API
-    fetch('/download', {
+    console.log(fileID)
+
+    const fileInfo = {
+        "fileID":fileID,
+        "fileName":fileName,
+        "pieceSize":pieceSize,
+        "numOfPieces":numOfPieces
+   };
+
+    fetch('/download', { //sending a post request to the download route.
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ fileInfo }),
+      body: JSON.stringify({  fileInfo  }),
     })
       .then(response => response.json())
       .then(data => {
@@ -30,13 +39,9 @@ function downloadSelectedFile() {
         // Handle the response as needed
       })
       .catch(error => console.error('Error during download:', error));
-  } else {
-    console.log("No file selected");
+  } 
+  else 
+  {
+    //TODO: Implement logic on what happens when we didn't select a div yet
   }
 }
-
-fileElements.forEach((fileElement) => {
-  fileElement.addEventListener('click', function() {
-    selectDiv(this);
-  });
-});

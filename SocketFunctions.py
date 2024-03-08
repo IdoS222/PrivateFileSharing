@@ -16,7 +16,6 @@ class SocketFunctions:
         received_data = ""
         while len(received_data) < data_length:
             received_data += sock.recv(data_length - len(received_data)).decode()
-
         return received_data
 
     @staticmethod

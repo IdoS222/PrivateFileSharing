@@ -2,7 +2,7 @@ import json
 import socket
 import threading
 import base64
-
+from SocketFunctions import SocketFunctions
 
 class PeerServer:
     ip = "0.0.0.0"
@@ -25,7 +25,6 @@ class PeerServer:
             self.serverAlive = True
             while self.serverAlive:
                 clientSocket, addr = self.serverSocket.accept()
-                print("new connection is made with {}".format(addr))
                 threading.Thread(target=self.server_loop, args=[clientSocket, ]).start()
         except Exception as e:
             self.serverAlive = False
@@ -40,7 +39,7 @@ class PeerServer:
         peerInterested = True
         while peerInterested:
             try:
-                data = clientSocket.recv(1024).decode()
+                data = SocketFunctions.read_from_socket(clientSocket)
                 if data:
                     dataFromPeer = json.loads(data)
                     if dataFromPeer["requestType"] == "downloadPart":
@@ -54,8 +53,7 @@ class PeerServer:
                                 data += file.read(1)
                                 index += 1
                             jsonDump = json.dumps({"data": (base64.b64encode(data)).decode('utf8')})
-                            messageToClient = "{}.{}".format(len(jsonDump), jsonDump).encode()
-                            clientSocket.send(messageToClient)
+                            SocketFunctions.send_data(clientSocket, jsonDump)
                     elif dataFromPeer["requestType"] == "killConnection":
                         peerInterested = False
                 else:
@@ -63,7 +61,7 @@ class PeerServer:
             except KeyError as e:
                 # This means that we got an illegal request.
                 print(e)
-                clientSocket.send(json.dumps({"errorMessage": "Couldn't send the data"}).encode())
+                SocketFunctions.send_data(clientSocket, json.dumps({"errorMessage": "Couldn't send the data"}).encode())
                 peerInterested = False
             except ConnectionResetError as e:
                 # This means that something is wrong with the connection and we cant send an error message since it

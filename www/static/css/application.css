@@ -64,33 +64,6 @@ body {
   z-index: 999;
 }
 
-#download-btn {
-  padding: 10px 15px;
-  text-align: center;
-  color: #fff;
-  text-decoration: none;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  margin-bottom: 10px;
-  cursor: pointer;
-  transition: background-color 0.3s ease, border-color 0.3s ease;
-  background-color: #3498db;
-}
-
-#download-btn:hover {
-  background-color: #2980b9;
-}
-
-#download-btn:disabled {
-  background-color: #e74c3c;
-  cursor: not-allowed;
-}
-
-#download-btn.enabled {
-  background-color: #2ecc71;
-  border-color: #27ae60;
-}
-
 #main-content {
   padding: 20px;
   margin-right: 220px;
@@ -127,54 +100,54 @@ body {
 }
 #refreshButton {
   position: fixed;
-  top: 80px; /* Adjust the top value based on your top bar height */
-  left: 70px; /* Adjust the right value for top right positioning */
+  top: 80px;
+  left: 70px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 5px; /* Adjust padding to make the button a bit bigger */
-  z-index: 1001; /* Adjust the z-index value as needed */
-  transition: background-color 0.3s ease; /* Add transition effect for hover */
+  padding: 5px;
+  z-index: 1001;
+  transition: background-color 0.3s ease;
 }
 #infoButton {
   position: fixed;
-  top: 80px; /* Adjust the top value based on your top bar height */
-  left: 130px; /* Adjust the right value for top right positioning */
+  top: 80px;
+  left: 130px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 5px; /* Adjust padding to make the button a bit bigger */
-  z-index: 1001; /* Adjust the z-index value as needed */
-  transition: background-color 0.3s ease; /* Add transition effect for hover */
+  padding: 5px;
+  z-index: 1001;
+  transition: background-color 0.3s ease;
 }
 #settingsButton {
   position: fixed;
-  top: 80px; /* Adjust the top value based on your top bar height */
-  left: 190px; /* Adjust the right value for top right positioning */
+  top: 80px;
+  left: 190px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 5px; /* Adjust padding to make the button a bit bigger */
-  z-index: 1001; /* Adjust the z-index value as needed */
-  transition: background-color 0.3s ease; /* Add transition effect for hover */
+  padding: 5px;
+  z-index: 1001;
+  transition: background-color 0.3s ease;
 }
 #removeButton {
   position: fixed;
-  top: 80px; /* Adjust the top value based on your top bar height */
-  right: 250px; /* Adjust the right value for top right positioning */
+  top: 80px;
+  right: 250px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 5px; /* Adjust padding to make the button a bit bigger */
-  z-index: 1001; /* Adjust the z-index value as needed */
-  transition: background-color 0.3s ease; /* Add transition effect for hover */
+  padding: 5px;
+  z-index: 1001;
+  transition: background-color 0.3s ease;
 }
 #uploadFilesButton img,
 #refreshButton img,
 #infoButton img,
 #settingsButton img,
 #removeButton img {
-  width: 40px; /* Adjust the size as needed */
+  width: 40px;
   height: auto;
 }
 
@@ -185,11 +158,11 @@ body {
 #removeButton {
   position: fixed;
   background: none;
-  border: 1px solid #000; /* Black border */
+  border: 1px solid #000;
   cursor: pointer;
-  padding: 5px; /* Adjust padding to make the button a bit bigger */
-  z-index: 1001; /* Adjust the z-index value as needed */
-  transition: background-color 0.3s ease; /* Add transition effect for hover */
+  padding: 5px;
+  z-index: 1001; 
+  transition: background-color 0.3s ease; 
 }
 
 #uploadFilesButton:hover,
@@ -197,14 +170,14 @@ body {
 #infoButton:hover,
 #settingsButton:hover,
 #removeButton:hover {
-  background-color: rgba(0, 0, 0, 0.1); /* Darken the background on hover */
+  background-color: rgba(0, 0, 0, 0.1);
 }
 .separator-line {
-  border: 2px solid #000; /* Black line */
+  border: 2px solid #000;
   width: 100%;
-  margin-top: 60px; /* Adjust the top margin as needed */
+  margin-top: 60px;
 }
 .scroll-container {
-  max-height: 900px; /* Adjust the maximum height as needed */
+  max-height: 900px;
   overflow-y: auto;
 }
