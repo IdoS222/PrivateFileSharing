@@ -15,6 +15,7 @@ from PeerServer import PeerServer
 import ipaddress
 from SocketFunctions import SocketFunctions
 from tkinter import Tk
+import math
 
 app = Flask(__name__, template_folder=os.path.join("www", "templates"),
             static_folder=os.path.join("www", "static"))  # App object
@@ -40,6 +41,7 @@ def application():
             try:
                 trackerData = TrackerRequest.get_tracker_data(tuple(flask_login.current_user.__dict__["tracker"]),
                                                               flask_login.current_user.__dict__)
+                # TODO: make a section to display tracker info
                 filesFromTracker = TrackerRequest.get_files_from_tracker(
                     tuple(flask_login.current_user.__dict__["tracker"]),
                     flask_login.current_user.__dict__)
@@ -81,6 +83,7 @@ def register():
     }))
     data = SocketFunctions.read_from_socket(userSocket)
     jsonStatus = json.loads(data)
+    userSocket.close()
     try:
         if jsonStatus["status"] == "Successfully register the user {} to the database.".format(request.values["email"]):
             return redirect('/application')
@@ -118,7 +121,7 @@ def login():
 
         data = SocketFunctions.read_from_socket(userSocket)
         userInfoStatus = json.loads(data)
-
+        userSocket.close()
         try:
             if loginJsonStatus["status"] == "Successful login.":
                 try:
@@ -157,6 +160,7 @@ def load_user(user_email):
 
     data = SocketFunctions.read_from_socket(userSocket)
     jsonStatus = json.loads(data)
+    userSocket.close()
     try:
         if jsonStatus["status"] == "The user doesnt exists":
             return None  # The user doesn't exist, and we need to send None
@@ -219,7 +223,7 @@ def settings():
 
     data = SocketFunctions.read_from_socket(usersSocket)
     jsonData = json.loads(data)
-
+    usersSocket.close()
     try:
         if jsonData["status"] == "tracker set":
             activeTracker = [(request.values["ipAddress"], int(request.values["port"]))]
@@ -247,39 +251,47 @@ def upload():
     root.call('wm', 'attributes', '.', '-topmost', True)
     pathToFile = filedialog.askopenfilename(
         title="Select a file to upload to the tracker.")
+    # TODO: if the user cancel the file selection dont crash (pls)
     fileName = os.path.basename(pathToFile)
     root.destroy()
     fileSize = os.stat(pathToFile).st_size
-    if fileSize < 10000:  # If the file is less than 10 KB,
-        # there is no reason to split it into the standard 1000 pieces,
-        # and we will split it into 10 pieces 1KB each
-        amountOfPieces = 10
+    """
+    If the file size is 1MB or less the piece size will be 500KB
+    If the file size is 10MB or less the piece size will be 1MB
+    If the file size is 100MB or less the piece size will be 2MB
+    If the file size is 1GB or less the piece size will be 5MB
+    """
+    if 0 <= fileSize <= 1000000:
+        pieceSize = 50000
+    elif 1000000 < fileSize <= 10000000:
+        pieceSize = 1000000
+    elif 10000000 < fileSize <= 100000000:
+        pieceSize = 2000000
+    elif 100000000 < fileSize <= 1000000000:
+        pieceSize = 5000000
     else:
-        amountOfPieces = 1000
-    pieceSize = fileSize / amountOfPieces
+        # TODO: tell the user that you cant upload a file bigger then 1GB and cancel the submit file.
+        return redirect("/application")
+    amountOfPieces = math.ceil(fileSize / pieceSize)
     fileVisibility = "visitor"  # TODO: Change that to ask the user.
     fileOwner = socket.gethostbyname(socket.gethostname())
-    peerList = []
-    peerList.append(fileOwner)
+    peerList = [fileOwner]
     fileOwners = json.dumps({"Peers": peerList})
     fileUploader = json.dumps(flask_login.current_user.__dict__)
     # Initialize an empty list to store piece hashes
     hashes_list = []
 
-    with open(pathToFile, 'rb') as file:
+    with open(pathToFile, 'rb') as file:  # Code from gpt
         file_content = file.read()
-        total_size = len(file_content)
-        piece_size = total_size // amountOfPieces
 
         for i in range(amountOfPieces):
-            start_idx = i * piece_size
-            end_idx = (i + 1) * piece_size
-            piece_data = file_content[start_idx:end_idx] if i != amountOfPieces - 1 else file_content[start_idx:]
-
-            hash_object = hashlib.sha256()
-            hash_object.update(piece_data)
-            piece_hash = hash_object.hexdigest()
-            hashes_list.append(piece_hash)
+            start_idx = i * pieceSize
+            end_idx = (i + 1) * pieceSize
+            pieceData = file_content[start_idx:end_idx] if i != amountOfPieces - 1 else file_content[start_idx:]
+            hashObject = hashlib.sha256()
+            hashObject.update(pieceData)
+            pieceHash = hashObject.hexdigest()
+            hashes_list.append(pieceHash)
 
     hashes_list = json.dumps({
         "hashes": hashes_list
@@ -292,14 +304,14 @@ def upload():
                                                           fileOwners, fileUploader, hashes_list)
     try:
         if requestStatus["status"] == "success":
-            # Notify the user that the upload went smoothly.
+            # TODO: Notify the user that the upload went smoothly.
             return redirect("/application")
 
-        # Notify that something went wrong
+        # TODO: Notify that something went wrong
         print(requestStatus["status"])
         return redirect("/application")
     except KeyError:
-        # Notify that something went wrong
+        # TODO: Notify that something went wrong
         print(requestStatus)
         return redirect("/application")
 
@@ -308,10 +320,16 @@ def upload():
 def download():
     data = request.data.decode()
     fileData = json.loads(data)["fileInfo"]
-    download_file(flask_login.current_user.__dict__["tracker"], fileData["fileID"], fileData["fileName"],
-                  int(fileData["numOfPieces"]), int(fileData["pieceSize"]))
+    downloadStatus = download_file(flask_login.current_user.__dict__["tracker"], fileData["fileID"],
+                                   fileData["fileName"],
+                                   int(fileData["numOfPieces"]), int(fileData["pieceSize"]))
 
-    # TODO:WHAT TO DO AFTER DOWNLOADING THE FILE
+    if downloadStatus:
+        # TODO: notify the user that the download went smoothly.
+        pass
+    else:
+        # TODO: notify the user that the download failed.
+        pass
 
 
 @app.route('/refresh', methods=["POST"])
@@ -323,40 +341,64 @@ def refresh():
     return redirect("/application")  # That simple?
 
 
+@app.route("/delete", methods=["POST"])
+def delete():
+    if request.method != "POST":
+        # We don't want to get a get request for here.
+        return redirect("/application")
+    data = request.data.decode()
+    fileData = json.loads(data)["fileInfo"]
+    deleteStatus = TrackerRequest.delete_file(flask_login.current_user.__dict__["tracker"],
+                                              flask_login.current_user.__dict__,
+                                              fileData["fileID"], fileData["fileName"])
+
+    if deleteStatus:
+        # TODO: notify the user that the deletion went smoothly.
+        return redirect("/application")
+    else:
+        # TODO: notify the user that the deletion failed.
+        pass
+
+
 def download_file(tracker, fileID, fileName, amountOfPieces, pieceSize):
     dataFromTracker = TrackerRequest.start_download(tracker, flask_login.current_user.__dict__, fileID, fileName)
-    # TODO: verify info from the tracker.
-    peerList = dataFromTracker["Peers"]
-    hashList = dataFromTracker["listOfHashes"]["hashes"]
+    try:
+        peerList = dataFromTracker["Peers"]
+        hashList = dataFromTracker["listOfHashes"]["hashes"]
+        answerList = []
 
-    threads = []
-    answerList = []
+        for pieceNum in range(amountOfPieces):
+            download_piece_from_peer(peerList, pieceNum, pieceSize, fileName, filesFolder, hashList, answerList)
 
-    for pieceNum in range(amountOfPieces):
-        thread = threading.Thread(target=download_piece_from_peer,
-                                  args=(peerList, pieceNum, pieceSize, fileName, filesFolder, hashList, answerList))
-        threads.append(thread)
-        thread.start()
+        for answer in answerList:
+            if not answer:
+                # If one of the answers is false, it means we didn't download one of the pieces.
+                # Notify the user and return
+                return False
 
-    for thread in threads:
-        thread.join()
+        # The process of merging all the files.
+        fileData = b''
+        # Merge all the small files to one large file.
+        for piece in range(
+                amountOfPieces):  # TODO: make it work with hebrew file names. (maybe dont let them upload file that dont have a english name....)
+            with open("{}/{}{}".format(filesFolder, piece, fileName), "rb") as pieceFile:
+                pieceData = pieceFile.read()
+            fileData += pieceData
+            os.remove("{}/{}{}".format(filesFolder, piece, fileName))
 
-    for answer in answerList:
-        if not answer:
-            # If one of the answers is false, it means we didn't download one of the pieces. Notify the user and return
-            return
+        with open("{}/{}".format(filesFolder, fileName), "wb") as file:
+            file.write(fileData)
 
-    # The process of merging all the files.
-    fileData = b''
-    # Merge all the small files to one large file.
-    for piece in range(amountOfPieces):
-        with open("{}/{}{}".format(filesFolder, piece, fileName), "rb") as pieceFile:
-            pieceData = pieceFile.read()
-        fileData += pieceData
-        os.remove("{}/{}{}".format(filesFolder, piece, fileName))
-
-    with open("{}/{}".format(filesFolder, fileName), "wb") as file:
-        file.write(fileData)
+        return True
+    except KeyError:  # This error means we didn't get the peers and hashes from the tracker,
+        # but instead we got a error message
+        # TODO: notify the user we couldn't connect to the tracker.
+        print(dataFromTracker["errorMessage"])
+        return False
+    except Exception:  # General exception just in case
+        # TODO: notify the user that something went wrong.
+        # TODO: maybe make a file with the error message or something? idk
+        return False
 
 
 def download_piece_from_peer(owners, pieceNum, pieceSize, fileName, path, hashlist, answerList):
@@ -376,6 +418,7 @@ def download_piece_from_peer(owners, pieceNum, pieceSize, fileName, path, hashli
             chuckData = base64.b64decode(jsonData["data"])
             # Validate the piece
             chuckHash = hashlib.sha256(chuckData).hexdigest()
+            sock.close()
             if chuckHash != hashlist[pieceNum]:
                 # We didn't get the correct data from the piece, and we need to download it from another peer.
                 continue

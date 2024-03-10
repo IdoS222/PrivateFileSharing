@@ -66,6 +66,7 @@ class UsersServer:
                                                       dataFromPeer["rank"])
                             SocketFunctions.send_data(clientSocket, status)
                         case "removeUser":
+                            # TODO: secure this shit before processing the request.
                             status = self.remove_user(dataFromPeer["email"])
                             SocketFunctions.send_data(clientSocket, status)
                         case "getUserInfo":

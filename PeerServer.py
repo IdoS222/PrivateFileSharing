@@ -61,7 +61,7 @@ class PeerServer:
             except KeyError as e:
                 # This means that we got an illegal request.
                 print(e)
-                SocketFunctions.send_data(clientSocket, json.dumps({"errorMessage": "Couldn't send the data"}).encode())
+                SocketFunctions.send_data(clientSocket, json.dumps({"errorMessage": "Got an illegal request"}).encode())
                 peerInterested = False
             except ConnectionResetError as e:
                 # This means that something is wrong with the connection and we cant send an error message since it

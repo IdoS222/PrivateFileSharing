@@ -10,7 +10,7 @@
   <!-- Top Bar -->
   <div id="top-bar">
     <div id="company-name">
-      <h2>The name for this fucking project</h2>
+      <h2>Private torrent service</h2>
     </div>
     <div id="top-bar-controls">
       <button class="btn" id="profile-btn">Profile</button>
@@ -44,11 +44,9 @@
         <img src="{{ url_for('static', filename='Images/settingsImg.jpg') }}" alt="Refresh">
       </button>
     </form>
-    <form id="removeButtonForm" method="GET" action="/remove">
-      <button type="submit" class="btn" id="removeButton">
+      <button type="submit" class="btn" id="removeButton" onclick="deleteSelectedDiv()">
         <img src="{{ url_for('static', filename='Images/removeImg.jpg') }}" alt="Refresh">
       </button>
-    </form>
     <hr class="separator-line"> <!-- Add a horizontal line as a separator -->
     <div id="file-container" class="scroll-container">
       {% if files|length > 0 %}

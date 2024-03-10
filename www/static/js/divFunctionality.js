@@ -17,7 +17,6 @@ function downloadSelectedFile() {
     const pieceSize = selectedDiv.getAttribute('data-pieceSize');
     const numOfPieces = selectedDiv.getAttribute('data-numOfPieces');
 
-    console.log(fileID)
 
     const fileInfo = {
         "fileID":fileID,
@@ -35,7 +34,6 @@ function downloadSelectedFile() {
     })
       .then(response => response.json())
       .then(data => {
-        console.log('Download response from Python script:', data);
         // Handle the response as needed
       })
       .catch(error => console.error('Error during download:', error));
@@ -45,3 +43,34 @@ function downloadSelectedFile() {
     //TODO: Implement logic on what happens when we didn't select a div yet
   }
 }
+
+function deleteSelectedDiv() {
+  if (selectedDiv) {
+    const fileID = selectedDiv.getAttribute('data-fileID');
+    const fileName = selectedDiv.getAttribute('data-fileName');
+
+    const fileInfo = {
+        "fileID":fileID,
+        "fileName":fileName,
+   };
+
+    fetch('/delete', { //sending a post request to the download route.
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({  fileInfo  }),
+    })
+      .then(response => response.json())
+      .then(data => {
+        // Handle the response as needed
+      })
+      .catch(error => console.error('Error during delete:', error));
+  }
+  else
+  {
+    //TODO: Implement logic on what happens when we didn't select a div yet
+  }
+}
+
+

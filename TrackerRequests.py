@@ -28,6 +28,7 @@ class TrackerRequest:
 
             data = SocketFunctions.read_from_socket(sock)
             files = json.loads(data)
+            sock.close()
             return files
         except Exception:
             return {"errorMessage": "Couldn't get the files from the tracker"}
@@ -73,6 +74,7 @@ class TrackerRequest:
 
             data = SocketFunctions.read_from_socket(sock)
             status = json.loads(data)
+            sock.close()
             return status
         except Exception:
             return {"errorMessage": "Couldn't upload the file to the server"}
@@ -105,6 +107,7 @@ class TrackerRequest:
 
             data = SocketFunctions.read_from_socket(sock)
             answer = json.loads(data)
+            sock.close()
             return answer
         except Exception as e:
             print(e)
@@ -138,6 +141,7 @@ class TrackerRequest:
 
             data = SocketFunctions.read_from_socket(sock)
             status = json.loads(data)
+            sock.close()
             return status
         except Exception:
             return {"errorMessage": "Couldn't send the finish download notification to the tracker"}
@@ -155,6 +159,7 @@ class TrackerRequest:
         try:
             finishDownloadRequest = json.dumps({
                 "requestType": 4,
+                "user": user,
                 "userID": user["userID"],
                 "firstName": user["firstName"],
                 "lastName": user["lastName"],
@@ -170,6 +175,7 @@ class TrackerRequest:
 
             data = SocketFunctions.read_from_socket(sock)
             status = json.loads(data)
+            sock.close()
             return status
         except Exception:
             return {"errorMessage": "Couldn't delete the file from the tracker"}
@@ -198,6 +204,7 @@ class TrackerRequest:
 
             data = SocketFunctions.read_from_socket(sock)
             trackerData = json.loads(data)
+            sock.close()
             return trackerData
         except Exception:
             return {"errorMessage": "Couldn't get the tracker data"}

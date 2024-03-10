@@ -38,7 +38,8 @@ class PublicTracker:
                     fileVisibility TEXT,
                     fileOwners TEXT,
                     fileUploader TEXT,
-                    listOfHashes TEXT
+                    listOfHashes TEXT,
+                    numberOfDownloads INTEGER
             )""")
 
             newFilesConnection.commit()
@@ -129,31 +130,25 @@ class PublicTracker:
 
                             if dataFromPeer["fileSize"] > 1000000000:  # The file size limit for now is 1 GB
                                 SocketFunctions.send_data(clientSocket,
-                                                          json.dumps({
-                                                              "errorMessage": "The file is bigger then 1GB."}))
+                                                          json.dumps({"errorMessage": "The file is bigger then 1GB."}))
                                 continue
 
-                            if dataFromPeer["pieceSize"] * dataFromPeer["amountOfPieces"] != dataFromPeer["fileSize"]:
-                                print(dataFromPeer["pieceSize"])
-                                print(dataFromPeer["amountOfPieces"])
-                                print(dataFromPeer["fileSize"])
-                                SocketFunctions.send_data(clientSocket,
-                                                          json.dumps({
-                                                              "errorMessage": "piece size times the amount of pieces doesnt equals to the file size."}))
-                                continue
                             filesCurser.execute(
-                                "INSERT INTO files (fileName, fileSize, pieceSize, amountOfPieces, fileVisibility, fileOwners, fileUploader, listOfHashes) "
-                                "VALUES ('{}', {}, {}, {}, '{}', '{}', '{}', '{}')".format(dataFromPeer["fileName"],
-                                                                                           dataFromPeer["fileSize"],
-                                                                                           dataFromPeer["pieceSize"],
-                                                                                           dataFromPeer[
-                                                                                               "amountOfPieces"],
-                                                                                           dataFromPeer[
-                                                                                               "fileVisibility"],
-                                                                                           dataFromPeer["fileOwners"],
-                                                                                           dataFromPeer["fileUploader"],
-                                                                                           dataFromPeer[
-                                                                                               "listOfHashes"]))
+                                "INSERT INTO files (fileName, fileSize, pieceSize, amountOfPieces, fileVisibility, fileOwners, fileUploader, listOfHashes, numberOfDownloads) "
+                                "VALUES ('{}', {}, {}, {}, '{}', '{}', '{}', '{}', {})".format(dataFromPeer["fileName"],
+                                                                                               dataFromPeer["fileSize"],
+                                                                                               dataFromPeer[
+                                                                                                   "pieceSize"],
+                                                                                               dataFromPeer[
+                                                                                                   "amountOfPieces"],
+                                                                                               dataFromPeer[
+                                                                                                   "fileVisibility"],
+                                                                                               dataFromPeer[
+                                                                                                   "fileOwners"],
+                                                                                               dataFromPeer[
+                                                                                                   "fileUploader"],
+                                                                                               dataFromPeer[
+                                                                                                   "listOfHashes"], 0))
                             filesConnection.commit()
                             filesConnection.close()
                             SocketFunctions.send_data(clientSocket,
@@ -171,7 +166,6 @@ class PublicTracker:
                                                           json.dumps({
                                                               "errorMessage": "file name doesnt match with the database"}))
                                 continue
-
 
                             SocketFunctions.send_data(clientSocket,
                                                       json.dumps({"Peers": json.loads(file[6])["Peers"],
@@ -193,9 +187,10 @@ class PublicTracker:
                             previousOwners = json.loads(file[6])  # getting the owners
                             owner = addr[0]
                             newOwners = json.dumps(previousOwners.append(owner))
-                            filesConnection.execute("UPDATE files SET fileOwners = '{}' WHERE id = {}".format(newOwners,
-                                                                                                              dataFromPeer[
-                                                                                                                  "fileID"]))
+                            newAmountOfDownload = file[9] + 1
+                            filesConnection.execute(
+                                "UPDATE files SET fileOwners = '{}' AND SET numberOfDownloads = {} WHERE id = {}".format(
+                                    newOwners, newAmountOfDownload, dataFromPeer["fileID"]))
                             filesConnection.commit()
                             filesConnection.close()
                             SocketFunctions.send_data(clientSocket, json.dumps({"status": "success"}))
@@ -213,10 +208,8 @@ class PublicTracker:
                                                               "errorMessage": "file name doesnt match with the database"}))
                                 continue
 
-                            uploader = "{}:{}:{}:{}:{}".format(dataFromPeer["userID"], dataFromPeer["firstName"],
-                                                               dataFromPeer["lastName"], dataFromPeer["email"],
-                                                               dataFromPeer["rank"])
-                            if uploader != file[7]:  # This means the user that sent the request isn't the uploader
+                            if dataFromPeer["user"] != json.loads(
+                                    file[7]):  # This means the user that sent the request isn't the uploader
                                 # and he cant delete the file
                                 SocketFunctions.send_data(clientSocket, json.dumps(
                                     {"errorMessage": "original uploader and request uploader arent matching"}))
