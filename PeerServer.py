@@ -7,7 +7,7 @@ from SocketFunctions import SocketFunctions
 class PeerServer:
     ip = "0.0.0.0"
     port = 15674
-    filesFolder = r"C:\Users\owner\Desktop\Test"
+    filesFolder = r"C:\Users\User\Desktop\files"
 
     def __init__(self):
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

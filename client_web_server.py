@@ -23,7 +23,7 @@ app.config['SECRET_KEY'] = 'dashfqh9f8hfwdfkjwefh78y9342h'  # Secret Key
 login_manager = LoginManager()  # Login manager object
 login_manager.init_app(app)
 login_manager.session_protection = "strong"
-filesFolder = r"C:\Users\owner\Desktop\Test2"
+filesFolder = r"C:\Users\User\Desktop\files"
 usersServerLocation = ("127.0.0.1", 29574)
 activeUser = None
 
@@ -215,7 +215,7 @@ def settings():
     usersSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     usersSocket.connect(usersServerLocation)
 
-    SocketFunctions.send_data(usersSocket.send, json.dumps({
+    SocketFunctions.send_data(usersSocket, json.dumps({
         "requestType": "changeTracker",
         "email": flask_login.current_user.__dict__["email"],
         "tracker": json.dumps({"ip": request.values["ipAddress"], "port": 6987})
@@ -236,8 +236,6 @@ def settings():
     except KeyError:
         # error while setting the tracker
         print(jsonData)
-
-    return render_template("tough_guy.html")
 
 
 @app.route('/upload', methods=["POST"])
