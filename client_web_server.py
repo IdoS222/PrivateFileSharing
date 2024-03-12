@@ -1,5 +1,6 @@
 import base64
 import json
+import random
 import socket
 import threading
 import hashlib
@@ -23,7 +24,7 @@ app.config['SECRET_KEY'] = 'dashfqh9f8hfwdfkjwefh78y9342h'  # Secret Key
 login_manager = LoginManager()  # Login manager object
 login_manager.init_app(app)
 login_manager.session_protection = "strong"
-filesFolder = r"C:\Users\User\Desktop\files"
+filesFolder = r"C:\Users\Owner\Desktop\Test"
 usersServerLocation = ("127.0.0.1", 29574)
 activeUser = None
 
@@ -38,7 +39,7 @@ def index():
 def application():
     if request.method == "GET":
         if flask_login.current_user.__dict__["tracker"] != "No":
-            try:
+            try:  # TODO: what if we cant connect to tracker
                 trackerData = TrackerRequest.get_tracker_data(tuple(flask_login.current_user.__dict__["tracker"]),
                                                               flask_login.current_user.__dict__)
                 # TODO: make a section to display tracker info
@@ -249,7 +250,9 @@ def upload():
     root.call('wm', 'attributes', '.', '-topmost', True)
     pathToFile = filedialog.askopenfilename(
         title="Select a file to upload to the tracker.")
-    # TODO: if the user cancel the file selection dont crash (pls)
+    if pathToFile == '':
+        # TODO: tell the user that he canceled the file upload.
+        return redirect('/application')
     fileName = os.path.basename(pathToFile)
     root.destroy()
     fileSize = os.stat(pathToFile).st_size
@@ -271,7 +274,8 @@ def upload():
         # TODO: tell the user that you cant upload a file bigger then 1GB and cancel the submit file.
         return redirect("/application")
     amountOfPieces = math.ceil(fileSize / pieceSize)
-    fileVisibility = "visitor"  # TODO: Change that to ask the user.
+    fileVisibility = json.loads(request.data.decode())[
+        "rank"]  # Getting the visibility from the request we got from the js
     fileOwner = socket.gethostbyname(socket.gethostname())
     peerList = [fileOwner]
     fileOwners = json.dumps({"Peers": peerList})
@@ -365,7 +369,7 @@ def download_file(tracker, fileID, fileName, amountOfPieces, pieceSize):
         hashList = dataFromTracker["listOfHashes"]["hashes"]
         answerList = []
 
-        for pieceNum in range(amountOfPieces):
+        for pieceNum in range(amountOfPieces):  # TODO: Multi process
             download_piece_from_peer(peerList, pieceNum, pieceSize, fileName, filesFolder, hashList, answerList)
 
         for answer in answerList:
@@ -378,7 +382,7 @@ def download_file(tracker, fileID, fileName, amountOfPieces, pieceSize):
         fileData = b''
         # Merge all the small files to one large file.
         for piece in range(
-                amountOfPieces):  # TODO: make it work with hebrew file names. (maybe dont let them upload file that dont have a english name....)
+                amountOfPieces):
             with open("{}/{}{}".format(filesFolder, piece, fileName), "rb") as pieceFile:
                 pieceData = pieceFile.read()
             fileData += pieceData
@@ -401,7 +405,7 @@ def download_file(tracker, fileID, fileName, amountOfPieces, pieceSize):
 
 def download_piece_from_peer(owners, pieceNum, pieceSize, fileName, path, hashlist, answerList):
     try:
-        for owner in owners:
+        for owner in owners:  # TODO: get random peer.
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((owner, 15674))
             pieceRequest = {
@@ -413,10 +417,10 @@ def download_piece_from_peer(owners, pieceNum, pieceSize, fileName, path, hashli
             SocketFunctions.send_data(sock, json.dumps(pieceRequest))
             dataFromPeer = SocketFunctions.read_from_socket(sock)
             jsonData = json.loads(dataFromPeer)
+            sock.close()
             chuckData = base64.b64decode(jsonData["data"])
             # Validate the piece
             chuckHash = hashlib.sha256(chuckData).hexdigest()
-            sock.close()
             if chuckHash != hashlist[pieceNum]:
                 # We didn't get the correct data from the piece, and we need to download it from another peer.
                 continue

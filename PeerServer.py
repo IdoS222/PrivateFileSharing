@@ -1,13 +1,19 @@
 import json
+import os.path
 import socket
 import threading
 import base64
 from SocketFunctions import SocketFunctions
 
+#os.path.isdir(path) -- checks if the path exists and if it's a folder. if so return true
+
+#os.path.isfile(path) - checks if the path exists and if it's a file. if so return true
+
+
 class PeerServer:
     ip = "0.0.0.0"
     port = 15674
-    filesFolder = r"C:\Users\User\Desktop\files"
+    filesFolder = r"C:\Users\Owner\Desktop\Test2"
 
     def __init__(self):
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -46,10 +52,12 @@ class PeerServer:
                         # logic for sending a file
                         pathToFile = r"{}\{}".format(self.filesFolder, dataFromPeer["fileName"])  # The path to the file
                         with open(pathToFile, 'rb') as file:  # opening the file
-                            file.seek(int(dataFromPeer["pieceNumber"]) * int(dataFromPeer["pieceSize"]))  # jumping to the part of the file, the peer is interested in.
+                            file.seek(int(dataFromPeer["pieceNumber"]) * int(dataFromPeer[
+                                                                                 "pieceSize"]))  # jumping to the part of the file, the peer is interested in.
                             index = 0
                             data = b''
-                            while index < dataFromPeer["pieceSize"]:  # reading only the part we need and stopping after we finish reading it
+                            while index < dataFromPeer[
+                                "pieceSize"]:  # reading only the part we need and stopping after we finish reading it
                                 data += file.read(1)
                                 index += 1
                             jsonDump = json.dumps({"data": (base64.b64encode(data)).decode('utf8')})

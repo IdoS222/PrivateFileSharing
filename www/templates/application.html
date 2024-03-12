@@ -24,11 +24,9 @@
 
   <!-- Main Content -->
   <div id="main-content">
-    <form id="uploadFilesForm" method="POST" action="/upload">
-      <button type="submit" class="btn" id="uploadFilesButton">
-        <img src="{{ url_for('static', filename='Images/uploadImg.jpg') }}" alt="Upload Image">
-      </button>
-    </form>
+    <button type="submit" class="btn" id="uploadFilesButton" onclick="showModal()">
+      <img src="{{ url_for('static', filename='Images/uploadImg.jpg') }}" alt="Upload Image">
+    </button>
     <form id="refreshButtonForm" method="POST" action="/refresh">
       <button type="submit" class="btn" id="refreshButton">
         <img src="{{ url_for('static', filename='Images/refreshImg.jpg') }}" alt="Refresh">
@@ -59,6 +57,28 @@
     </div>
   </div>
 
+  <section class="modal">
+    <div class="modal-content">
+      <button class="close-button" onclick="closeModal()">
+        <img src="{{ url_for('static', filename='Images/closeModalImg.jpg') }}" alt="Close">
+      </button>
+      <h5>Please specify what ranks can see this file</h5>
+      <button onclick="uploadFile('visitor')">
+        visitor
+      </button>
+      <button onclick="uploadFile('worker')">
+        worker
+      </button>
+      <button onclick="uploadFile('manager')">
+        manager
+      </button>
+      <button onclick="uploadFile('admin')">
+        admin
+      </button>
+    </div>
+  </section>
+
   <script src="{{ url_for('static', filename='js/divFunctionality.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/modalFunctions.js') }}"></script>
 </body>
 </html>
