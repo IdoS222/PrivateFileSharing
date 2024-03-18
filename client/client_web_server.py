@@ -25,11 +25,11 @@ login_manager.init_app(app)
 login_manager.session_protection = "strong"
 filesFolder = r"C:\Users\Owner\Desktop\Test"
 usersServerLocation = ("127.0.0.1", 29574)
-activeUser = None
 
 
 @app.route('/')
 def index():
+    # TODO: MAKE A INDEX PAGE
     return render_template("index.html")
 
 
@@ -58,11 +58,12 @@ def register():
         return render_template("register.html")
 
     try:  # trying to see if all the values we expected arrived.
-        print(request.values["firstName"])
-        print(request.values["lastName"])
-        print(request.values["email"])
-        print(request.values["password"])
-        print(request.values["confirmPassword"])
+        # x is a temp value top check if we get a KeyError.
+        x = request.values["firstName"]
+        x = request.values["lastName"]
+        x = request.values["email"]
+        x = request.values["password"]
+        x = request.values["confirmPassword"]
     except KeyError:
         # In this case, the values we wanted didn't arrive, and we need to do something about it (they think they are tough, we are tougher)
         return render_template("tough_guy.html")
@@ -96,8 +97,9 @@ def login():
 
     # Validating the login request we got.
     try:
-        print(request.values["email"])
-        print(request.values["password"])
+        # x is a temp value top check if we get a KeyError.
+        x = request.values["email"]
+        x = request.values["password"]
     except KeyError:
         return render_template("tough_guy.html")
     try:
@@ -197,7 +199,7 @@ def settings():
         return render_template("settings.html")
 
     try:
-        print(request.values["ipAddress"])
+        x = request.values["ipAddress"]
     except KeyError:
         return render_template("tough_guy.html")
 
@@ -224,9 +226,7 @@ def settings():
     usersSocket.close()
     try:
         if jsonData["status"] == "tracker set":
-            activeTracker = [(request.values["ipAddress"], int(request.values["port"]))]
-            flask_login.current_user.__dict__["tracker"] = activeTracker
-            print(flask_login.current_user.__dict__["tracker"])
+            flask_login.current_user.__dict__["tracker"] = [(request.values["ipAddress"], int(request.values["port"]))]
             return redirect("/application")
         else:
             # problem setting the tracker
@@ -248,7 +248,7 @@ def upload():
     pathToFile = filedialog.askopenfilename(
         title="Select a file to upload to the tracker.")  # TODO: FIGURE OUT WHY THIS FUCKING FILE DIALOG IS NOT FUCKING STABLE FUCK YOU TKINTER FUCKING DOGSHIT
     if pathToFile == '':
-        # TODO: tell the user that he canceled the file upload.
+        # TODO: tell the user that he canceled the file upload. (maybe not???)
         return redirect('/application')
     fileName = os.path.basename(pathToFile)
     root.destroy()
@@ -351,7 +351,8 @@ def delete():
                                               flask_login.current_user.__dict__,
                                               fileData["fileID"], fileData["fileName"])
 
-    return jsonify(deleteStatus)  # returning the status so the javascript can handle it and display the message to the user.
+    return jsonify(
+        deleteStatus)  # returning the status so the javascript can handle it and display the message to the user.
 
 
 def download_file(tracker, fileID, fileName, amountOfPieces, pieceSize):

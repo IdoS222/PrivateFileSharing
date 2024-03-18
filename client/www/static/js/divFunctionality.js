@@ -92,9 +92,7 @@ function deleteSelectedDiv() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({  fileInfo  }),
-    })
-      .then(response => response.json())
-      .then(data => {
+    }).then(response => response.json()).then(data => {
         // Handle the response as needed
         if (data.status == "success")
         {
@@ -104,8 +102,7 @@ function deleteSelectedDiv() {
         {
 
         }
-      })
-      .catch(error => console.error('Error during delete:', error));
+      }).catch(error => console.error('Error during delete:', error));
   }
   else
   {
