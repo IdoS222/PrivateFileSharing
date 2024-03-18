@@ -24,9 +24,9 @@ class PublicTracker:
         :return: Nothing
         """
         # Checking for the file database
-        if not os.path.isfile("Databases/files.db"):  # Checking if the file's database exists.
-            open("Databases/files.db", "x")
-            newFilesConnection = sqlite3.connect("Databases/files.db")
+        if not os.path.isfile("files.db"):  # Checking if the file's database exists.
+            open("files.db", "x")
+            newFilesConnection = sqlite3.connect("files.db")
             filesCurser = newFilesConnection.cursor()
 
             filesCurser.execute("""CREATE TABLE files (
@@ -99,7 +99,7 @@ class PublicTracker:
                     match dataFromPeer["requestType"]:
                         case 0:
                             # get all files from the database.
-                            filesConnection = sqlite3.connect("Databases/files.db")
+                            filesConnection = sqlite3.connect("files.db")
                             filesCurser = filesConnection.cursor()
 
                             match dataFromPeer["rank"]:
@@ -125,7 +125,7 @@ class PublicTracker:
                             SocketFunctions.send_data(clientSocket, json.dumps(filesToSend))
                         case 1:
                             # upload a new file
-                            filesConnection = sqlite3.connect("Databases/files.db")
+                            filesConnection = sqlite3.connect("files.db")
                             filesCurser = filesConnection.cursor()
 
                             if dataFromPeer["fileSize"] > 1000000000:  # The file size limit for now is 1 GB
@@ -155,7 +155,7 @@ class PublicTracker:
                                                       json.dumps({"status": "The file entered the database"}))
                         case 2:
                             # A user is stating a download and requesting the list of peers and a list of hashes
-                            filesConnection = sqlite3.connect("Databases/files.db")
+                            filesConnection = sqlite3.connect("files.db")
                             filesCurser = filesConnection.cursor()
 
                             filesCurser.execute("SELECT * FROM files WHERE id = {}".format(dataFromPeer["fileID"]))
@@ -172,7 +172,7 @@ class PublicTracker:
                                                                   "listOfHashes": json.loads(file[8])}))
                         case 3:
                             # user finished downloading a file
-                            filesConnection = sqlite3.connect("Databases/files.db")
+                            filesConnection = sqlite3.connect("files.db")
                             filesCurser = filesConnection.cursor()
 
                             filesCurser.execute("SELECT * FROM files WHERE id = {}".format(dataFromPeer["fileID"]))
@@ -196,7 +196,7 @@ class PublicTracker:
                             SocketFunctions.send_data(clientSocket, json.dumps({"status": "success"}))
                         case 4:
                             # delete a file from the database
-                            filesConnection = sqlite3.connect("Databases/files.db")
+                            filesConnection = sqlite3.connect("files.db")
                             filesCurser = filesConnection.cursor()
 
                             filesCurser.execute("SELECT * FROM files WHERE id = {}".format(dataFromPeer["fileID"]))

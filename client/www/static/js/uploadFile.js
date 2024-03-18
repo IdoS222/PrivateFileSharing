@@ -1,15 +1,14 @@
-function showModal() {
-    var modal = document.getElementsByClassName("modal")[0];
-    console.log(modal)
+var modal = document.getElementById("uploadFileModal");
+
+function showUploadFileModal() {
     modal.style.display = "block";
 }
 
-function closeModal() {
-    var modal = document.getElementsByClassName("modal")[0];
+function closeUploadFileModal() {
     modal.style.display = "none";
 }
 function uploadFile(rank) {
-     closeModal(); //closing the modal
+     closeUploadFileModal(); //closing the modal
      fetch('/upload', { //sending a post request to the download route.
       method: 'POST',
       headers: {
@@ -22,4 +21,10 @@ function uploadFile(rank) {
         // Handle the response as needed
       })
       .catch(error => console.error('Error during delete:', error));
+}
+
+window.onclick = function(event) { //code from W3 school
+  if (event.target == modal) {
+    closeUploadFileModal()
+  }
 }

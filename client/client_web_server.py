@@ -1,13 +1,12 @@
 import base64
 import json
-import random
 import socket
 import threading
 import hashlib
 from tkinter import filedialog
 import flask_login
 from flask_login import LoginManager
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, jsonify
 import os
 import subprocess
 from User import User
@@ -39,19 +38,18 @@ def index():
 def application():
     if request.method == "GET":
         if flask_login.current_user.__dict__["tracker"] != "No":
-            try:  # TODO: what if we cant connect to tracker
-                trackerData = TrackerRequest.get_tracker_data(tuple(flask_login.current_user.__dict__["tracker"]),
-                                                              flask_login.current_user.__dict__)
-                # TODO: make a section to display tracker info
-                filesFromTracker = TrackerRequest.get_files_from_tracker(
-                    tuple(flask_login.current_user.__dict__["tracker"]),
-                    flask_login.current_user.__dict__)
-                return render_template("application.html", files=filesFromTracker, trackerData=trackerData)
-            except ConnectionRefusedError:
-                # Send the application template with a message that we couldn't connect to the tracker.
-                return render_template("application.html")
+            trackerInfoAndFiles = TrackerRequest.get_files_and_tracker_info_from_tracker(
+                flask_login.current_user.__dict__["tracker"], flask_login.current_user.__dict__)
+            if len(trackerInfoAndFiles) == 1:
+                # The only reason this list is of len 1 is that we got an error message.
+                return render_template("application.html", errorMessage=trackerInfoAndFiles[0]["errorMessage"])
+
+            return render_template("application.html", files=trackerInfoAndFiles[0],
+                                   trackerInfo=trackerInfoAndFiles[1])
         else:
-            return render_template("application.html")
+            # There is no active tracker and we need to notify the user.
+            return render_template("application.html",
+                                   errorMessage="There is no active tracker! please connect to a tracker from the settings page.")
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -66,8 +64,7 @@ def register():
         print(request.values["password"])
         print(request.values["confirmPassword"])
     except KeyError:
-        # In this case, the values we wanted didn't arrive, and we need to do something about it (they think they are
-        # tough, we are tougher)
+        # In this case, the values we wanted didn't arrive, and we need to do something about it (they think they are tough, we are tougher)
         return render_template("tough_guy.html")
 
     # Trying to register the user in the database after verifying the values we got.
@@ -249,7 +246,7 @@ def upload():
     root.withdraw()
     root.call('wm', 'attributes', '.', '-topmost', True)
     pathToFile = filedialog.askopenfilename(
-        title="Select a file to upload to the tracker.")
+        title="Select a file to upload to the tracker.")  # TODO: FIGURE OUT WHY THIS FUCKING FILE DIALOG IS NOT FUCKING STABLE FUCK YOU TKINTER FUCKING DOGSHIT
     if pathToFile == '':
         # TODO: tell the user that he canceled the file upload.
         return redirect('/application')
@@ -354,12 +351,7 @@ def delete():
                                               flask_login.current_user.__dict__,
                                               fileData["fileID"], fileData["fileName"])
 
-    if deleteStatus:
-        # TODO: notify the user that the deletion went smoothly.
-        return redirect("/application")
-    else:
-        # TODO: notify the user that the deletion failed.
-        pass
+    return jsonify(deleteStatus)  # returning the status so the javascript can handle it and display the message to the user.
 
 
 def download_file(tracker, fileID, fileName, amountOfPieces, pieceSize):

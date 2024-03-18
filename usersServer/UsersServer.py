@@ -13,11 +13,11 @@ from SocketFunctions import SocketFunctions
 class UsersServer:
     port = 29574
 
-    def __init__(self, databaseLocation):
+    def __init__(self):
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.MAX_CONNECTIONS = 1500
         self.serverAlive = False
-        self.databaseLocation = databaseLocation + "/users.db"
+        self.databaseLocation = "users.db"
 
     def start_users_server(self):
         """
@@ -32,16 +32,15 @@ class UsersServer:
             while self.serverAlive:
                 clientSocket, addr = self.serverSocket.accept()
                 print("new connection is made with {}".format(addr))
-                threading.Thread(target=self.server_loop, args=[clientSocket, addr]).start()
+                threading.Thread(target=self.server_loop, args=[clientSocket, ]).start()
         except Exception as e:
             self.serverAlive = False
             print("Couldn't start the server. " + str(e))
 
-    def server_loop(self, clientSocket, addr):
+    def server_loop(self, clientSocket):
         """
         The loop that will occur in a thread when a new connection is made with a client.
         :param clientSocket: The socket that the server automatically creates when a new connection is made.
-        :param addr: The address of the client.
         :return: Nothing
         """
         peerInterested = True
@@ -196,8 +195,7 @@ class UsersServer:
                 if len(existingUsers) > 1:
                     return json.dumps({"status": "The user doesnt exists"})
                 else:
-                    if existingUsers[0][0] == userID and existingUsers[0][1] == firstName and existingUsers[0][
-                        2] == lastName and existingUsers[0][3] == email and existingUsers[0][5] == rank:
+                    if existingUsers[0][0] == userID and existingUsers[0][1] == firstName and existingUsers[0][2] == lastName and existingUsers[0][3] == email and existingUsers[0][5] == rank:
                         return json.dumps({"status": "The user exists"})
                     else:
                         return json.dumps({"status": "The user doesnt exists"})
@@ -249,7 +247,6 @@ class UsersServer:
                 user = list(existingUsers[0])
                 del user[4]
                 del user[5]
-                print(user)
                 return json.dumps({"status": user})
 
         except Exception as e:
@@ -274,7 +271,6 @@ class UsersServer:
             if not existingUsers or len(existingUsers) >= 2:
                 return json.dumps({"status": "The user doesnt exists"})
             else:
-                print("UPDATE users SET tracker = '{}' WHERE email = '{}'".format(tracker, email))
                 usersCurser.execute("UPDATE users SET tracker = '{}' WHERE email = '{}'".format(tracker, email))
                 usersConnection.commit()
                 usersConnection.close()
@@ -309,5 +305,5 @@ class UsersServer:
             usersConnection.close()
 
 
-u = UsersServer("Databases")
+u = UsersServer()
 u.start_users_server()

@@ -19,12 +19,20 @@
 
   <!-- Sidebar -->
   <div id="sidebar">
-    <button class="btn" id="download-btn" onclick="downloadSelectedFile()">Download</button>
+    <p id="fileID"></p>
+    <p id="fileName"></p>
+    <p id="fileSize"></p>
+    <p id="pieceSize"></p>
+    <p id="numOfPieces"></p>
+    <p id="fileVisibility"></p>
+    <p id="fileOwners"></p>
+    <p id="fileUploader"></p>
+    <p id="amountOfDownloads"></p>
   </div>
 
   <!-- Main Content -->
   <div id="main-content">
-    <button type="submit" class="btn" id="uploadFilesButton" onclick="showModal()">
+    <button type="submit" class="btn" id="uploadFilesButton" onclick="showUploadFileModal()">
       <img src="{{ url_for('static', filename='Images/uploadImg.jpg') }}" alt="Upload Image">
     </button>
     <form id="refreshButtonForm" method="POST" action="/refresh">
@@ -32,24 +40,17 @@
         <img src="{{ url_for('static', filename='Images/refreshImg.jpg') }}" alt="Refresh">
       </button>
     </form>
-    <form id="infoButtonForm" method="POST" action="">
-      <button type="submit" class="btn" id="infoButton">
-        <img src="{{ url_for('static', filename='Images/infoImg.jpg') }}" alt="Refresh">
-      </button>
-    </form>
-    <form id="settingsButtonForm" method="GET" action="/settings">
-      <button type="submit" class="btn" id="settingsButton">
-        <img src="{{ url_for('static', filename='Images/settingsImg.jpg') }}" alt="Refresh">
-      </button>
-    </form>
-      <button type="submit" class="btn" id="removeButton" onclick="deleteSelectedDiv()">
-        <img src="{{ url_for('static', filename='Images/removeImg.jpg') }}" alt="Refresh">
-      </button>
-    <hr class="separator-line"> <!-- Add a horizontal line as a separator -->
+    <button type="submit" class="btn" id="removeButton" onclick="deleteSelectedDiv()">
+      <img src="{{ url_for('static', filename='Images/removeImg.jpg') }}" alt="Refresh">
+    </button>
+    <button type="submit" class="btn" id="downloadButton" onclick="downloadSelectedFile()">
+      <img src="{{ url_for('static', filename='Images/downloadImg.jpg') }}" alt="Refresh">
+    </button>
+    <hr class="separator-line">
     <div id="file-container" class="scroll-container">
       {% if files|length > 0 %}
         {% for file in files %}
-        <div class="file-info" onclick="selectDiv(this)" data-fileID="{{ file[0] }}" data-fileName="{{ file[1] }}" data-pieceSize="{{ file[3] }}" data-numOfPieces="{{ file[4] }}">
+        <div class="file-info" onclick="selectDiv(this)" data-fileID="{{ file[0] }}" data-fileName="{{ file[1] }}" data-pieceSize="{{ file[3] }}" data-numOfPieces="{{ file[4] }}" data-fileVisibility="{{ file[5] }}" data-fileOwners="{{ file[6] }}" data-fileUploader="{{ file[7] }}" data-amountOfDownloads="{{ file[8] }}">
           <p>File name: {{ file[1] }}. File size: {{ file[2] }}</p>
         </div>
         {% endfor %}
@@ -57,9 +58,9 @@
     </div>
   </div>
 
-  <section class="modal">
+  <section class="modal" id="uploadFileModal">
     <div class="modal-content">
-      <button class="close-button" onclick="closeModal()">
+      <button class="close-button" onclick="closeUploadFileModal()">
         <img src="{{ url_for('static', filename='Images/closeModalImg.jpg') }}" alt="Close">
       </button>
       <h5>Please specify what ranks can see this file</h5>
@@ -78,7 +79,11 @@
     </div>
   </section>
 
+  <section class="modal" id="responseModal">
+
+  </section>
+
   <script src="{{ url_for('static', filename='js/divFunctionality.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/modalFunctions.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/uploadFile.js') }}"></script>
 </body>
 </html>

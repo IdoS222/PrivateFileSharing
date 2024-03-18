@@ -109,7 +109,7 @@ body {
   z-index: 1001;
   transition: background-color 0.3s ease;
 }
-#infoButton {
+#removeButton {
   position: fixed;
   top: 80px;
   left: 130px;
@@ -120,7 +120,7 @@ body {
   z-index: 1001;
   transition: background-color 0.3s ease;
 }
-#settingsButton {
+#downloadButton {
   position: fixed;
   top: 80px;
   left: 190px;
@@ -131,31 +131,18 @@ body {
   z-index: 1001;
   transition: background-color 0.3s ease;
 }
-#removeButton {
-  position: fixed;
-  top: 80px;
-  right: 250px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 5px;
-  z-index: 1001;
-  transition: background-color 0.3s ease;
-}
 #uploadFilesButton img,
 #refreshButton img,
-#infoButton img,
-#settingsButton img,
-#removeButton img {
+#removeButton img,
+#downloadButton img{
   width: 40px;
   height: auto;
 }
 
 #uploadFilesButton,
 #refreshButton,
-#infoButton,
-#settingsButton,
-#removeButton {
+#removeButton,
+#downloadButton {
   position: fixed;
   background: none;
   border: 1px solid #000;
@@ -167,9 +154,8 @@ body {
 
 #uploadFilesButton:hover,
 #refreshButton:hover,
-#infoButton:hover,
-#settingsButton:hover,
-#removeButton:hover {
+#removeButton:hover,
+#downloadButton:hover {
   background-color: rgba(0, 0, 0, 0.1);
 }
 .separator-line {
