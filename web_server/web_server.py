@@ -26,7 +26,7 @@ login_manager.session_protection = "strong"
 databaseLocation = r"C:\Users\Owner\Desktop\עידו\school\הנדסת תוכנה\PrivateFileSharing\web_server\users.db"
 
 
-#admin_required decorator
+# admin_required decorator
 def admin_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -34,9 +34,8 @@ def admin_required(func):
             return func(*args, **kwargs)
         else:
             return current_app.login_manager.unauthorized()
+
     return wrapper
-
-
 
 
 @app.route('/')
@@ -44,8 +43,6 @@ def index():
     # TODO: MAKE A INDEX PAGE
     return render_template("index.html")
 
-
-#asdfasdf
 
 @app.route('/test')
 @flask_login.login_required
@@ -56,28 +53,21 @@ def test():
 
 @app.route('/userExists', methods=['GET'])
 def userExists():
-    userID = request.args.get("userID")
-    if userID is None:
-        return "please provide a user id with the request"
-    email = request.args.get("email")
-    if email is None:
-        return "please provide an email with the request"
-    firstName = request.args.get("firstName")
-    if firstName is None:
-        return "please provide a first name with the request"
-    lastName = request.args.get("lastName")
-    if lastName is None:
-        return "please provide a last name with the request"
-    rank = request.args.get("rank")
-    if rank is None:
-        return "please provide a rank with the request"
-
-    userExists = DBFunctions.user_exists(userID, firstName, lastName, email, rank, databaseLocation)
-    if "status" in userExists.keys():
-        # Means the user exists
-        return "True"
+    userRaw = request.args.get("user")
+    user = json.loads(userRaw)
+    if user is None or not isinstance(user, dict):
+        if "userID" in user and "firstName" in user and "lastName" in user and "email" in user and "rank" in user:
+            isUserExist = DBFunctions.user_exists(user["userID"], user["firstName"], user["lastName"], user["email"], user["rank"], databaseLocation)
+            if "status" in isUserExist.keys():
+                # Means the user exists
+                return "True"
+            else:
+                return "False"
+        else:
+            return "Didn't get all the user data."
     else:
-        return "False"
+        return "Didn't get the user or the user is not in a dict object"
+
 
 
 @app.route('/application', methods=['GET', 'POST'])
@@ -165,7 +155,8 @@ def load_user(userEmail):
     if "status" in status.keys():
         # everything went well, and we didn't get any error.
         found_user = status["status"]
-        if found_user[5] == "No":  # Checking if there are any trackers that the user is connected to and sending it with the user info if yes
+        if found_user[
+            5] == "No":  # Checking if there are any trackers that the user is connected to and sending it with the user info if yes
             return User(found_user[0], found_user[1], found_user[2], found_user[3], found_user[4], "No")
         tracker = json.loads(found_user[5])
         return User(found_user[0], found_user[1], found_user[2], found_user[3], found_user[4],
@@ -308,7 +299,8 @@ def delete():
                                               flask_login.current_user.__dict__,
                                               fileData["fileID"], fileData["fileName"])
 
-    return jsonify(deleteStatus)  # returning the status so the javascript can handle it and display the message to the user.
+    return jsonify(
+        deleteStatus)  # returning the status so the javascript can handle it and display the message to the user.
 
 
 def download_file(tracker, fileID, fileName, amountOfPieces, pieceSize):
