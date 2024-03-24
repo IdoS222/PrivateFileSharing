@@ -25,10 +25,8 @@ class TrackerRequest:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect(tuple(tracker))
             SocketFunctions.send_data(sock, filesRequest)
-
             data = SocketFunctions.read_from_socket(sock)
             files = json.loads(data)
-
             dataRequest = json.dumps({
                 "requestType": 6,
                 "userID": user["userID"],
@@ -37,12 +35,11 @@ class TrackerRequest:
                 "email": user["email"],
                 "rank": user["rank"]
             })
-
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect(tuple(tracker))
+            print("yo")
             SocketFunctions.send_data(sock, dataRequest)
 
             data = SocketFunctions.read_from_socket(sock)
+            print("ya")
             trackerData = json.loads(data)
             sock.close()
             return [files, trackerData]

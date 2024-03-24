@@ -1,5 +1,6 @@
 import flask_login
 
+
 class User(flask_login.UserMixin):
     def __init__(self, userID, firstName, lastName, email, rank, tracker=None, authenticated=False):
         self.userID = userID

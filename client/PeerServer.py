@@ -1,5 +1,4 @@
 import json
-import os.path
 import socket
 import threading
 import base64
@@ -11,8 +10,6 @@ from SocketFunctions import SocketFunctions
 
 
 class PeerServer:
-    ip = "0.0.0.0"
-    port = 15674
     filesFolder = r"C:\Users\Owner\Desktop\Test2"
 
     def __init__(self):
@@ -26,7 +23,7 @@ class PeerServer:
         :return: Nothing
         """
         try:
-            self.serverSocket.bind((self.ip, self.port))
+            self.serverSocket.bind(("0.0.0.0", 15674))
             self.serverSocket.listen(self.MAX_CONNECTIONS)
             self.serverAlive = True
             while self.serverAlive:
@@ -52,12 +49,10 @@ class PeerServer:
                         # logic for sending a file
                         pathToFile = r"{}\{}".format(self.filesFolder, dataFromPeer["fileName"])  # The path to the file
                         with open(pathToFile, 'rb') as file:  # opening the file
-                            file.seek(int(dataFromPeer["pieceNumber"]) * int(dataFromPeer[
-                                                                                 "pieceSize"]))  # jumping to the part of the file, the peer is interested in.
+                            file.seek(int(dataFromPeer["pieceNumber"]) * int(dataFromPeer["pieceSize"]))  # jumping to the part of the file, the peer is interested in.
                             index = 0
                             data = b''
-                            while index < dataFromPeer[
-                                "pieceSize"]:  # reading only the part we need and stopping after we finish reading it
+                            while index < dataFromPeer["pieceSize"]:  # reading only the part we need and stopping after we finish reading it
                                 data += file.read(1)
                                 index += 1
                             jsonDump = json.dumps({"data": (base64.b64encode(data)).decode('utf8')})

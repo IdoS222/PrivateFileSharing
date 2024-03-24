@@ -1,7 +1,6 @@
 import base64
 import json
 import socket
-import threading
 import hashlib
 from tkinter import filedialog
 import flask_login
@@ -11,26 +10,51 @@ import os
 import subprocess
 from User import User
 from TrackerRequests import TrackerRequest
-from PeerServer import PeerServer
 import ipaddress
 from SocketFunctions import SocketFunctions
 from tkinter import Tk
 import math
+from DBFunctions import DBFunctions
 
-app = Flask(__name__, template_folder=os.path.join("www", "templates"),
-            static_folder=os.path.join("www", "static"))  # App object
+app = Flask(__name__, template_folder=os.path.join("../client/www", "templates"),
+            static_folder=os.path.join("../client/www", "static"))  # App object
 app.config['SECRET_KEY'] = 'dashfqh9f8hfwdfkjwefh78y9342h'  # Secret Key
 login_manager = LoginManager()  # Login manager object
 login_manager.init_app(app)
 login_manager.session_protection = "strong"
-filesFolder = r"C:\Users\Owner\Desktop\Test"
-usersServerLocation = ("127.0.0.1", 29574)
+databaseLocation = r"C:\Users\Owner\Desktop\עידו\school\הנדסת תוכנה\PrivateFileSharing\users.db"
 
 
 @app.route('/')
 def index():
     # TODO: MAKE A INDEX PAGE
     return render_template("index.html")
+
+
+@app.route('/userExists', methods=['GET'])
+def userExists():
+    userID = request.args.get("userID")
+    if userID is None:
+        return "please provide a user id with the request"
+    email = request.args.get("email")
+    if email is None:
+        return "please provide an email with the request"
+    firstName = request.args.get("firstName")
+    if firstName is None:
+        return "please provide a first name with the request"
+    lastName = request.args.get("lastName")
+    if lastName is None:
+        return "please provide a last name with the request"
+    rank = request.args.get("rank")
+    if rank is None:
+        return "please provide a rank with the request"
+
+    userExists = DBFunctions.user_exists(userID, firstName, lastName, email, rank, databaseLocation)
+    if "status" in userExists.keys():
+        # Means the user exists
+        return "True"
+    else:
+        return "False"
 
 
 @app.route('/application', methods=['GET', 'POST'])
@@ -40,6 +64,7 @@ def application():
         if flask_login.current_user.__dict__["tracker"] != "No":
             trackerInfoAndFiles = TrackerRequest.get_files_and_tracker_info_from_tracker(
                 flask_login.current_user.__dict__["tracker"], flask_login.current_user.__dict__)
+            print(trackerInfoAndFiles)
             if len(trackerInfoAndFiles) == 1:
                 # The only reason this list is of len 1 is that we got an error message.
                 return render_template("application.html", errorMessage=trackerInfoAndFiles[0]["errorMessage"])
@@ -69,25 +94,12 @@ def register():
         return render_template("tough_guy.html")
 
     # Trying to register the user in the database after verifying the values we got.
-    userSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    userSocket.connect(usersServerLocation)
-    SocketFunctions.send_data(userSocket, json.dumps({  # This is the request for registering a new user
-        "requestType": "registerUser",
-        "firstName": request.values["firstName"],
-        "lastName": request.values["lastName"],
-        "email": request.values["email"],
-        "password": request.values["password"],
-        "confirmPassword": request.values["confirmPassword"],
-        "rank": "visitor"
-    }))
-    data = SocketFunctions.read_from_socket(userSocket)
-    jsonStatus = json.loads(data)
-    userSocket.close()
-    try:
-        if jsonStatus["status"] == "Successfully register the user {} to the database.".format(request.values["email"]):
-            return redirect('/application')
-    except KeyError:  # If we get in here we got an error message from the server and the registration failed
-        return jsonStatus["errorMessage"]
+    status = DBFunctions.register_new_user(request.values["firstName"], request.values["lastName"],
+                                           request.values["email"],
+                                           request.values["password"], request.values["confirmPassword"], "visitor",
+                                           databaseLocation)
+
+    return jsonify(status)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -102,77 +114,41 @@ def login():
         x = request.values["password"]
     except KeyError:
         return render_template("tough_guy.html")
-    try:
-        userSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        userSocket.connect(usersServerLocation)
-        SocketFunctions.send_data(userSocket, json.dumps({  # This is the request for registering a new user
-            "requestType": "processLogin",
-            "email": request.values["email"],
-            "password": request.values["password"],
-        }))
 
-        data = SocketFunctions.read_from_socket(userSocket)
-        loginJsonStatus = json.loads(data)
+    loginStatus = DBFunctions.process_login(request.values["email"], request.values["password"], databaseLocation)
 
-        SocketFunctions.send_data(userSocket, json.dumps({  # This is the request for getting the user info
-            "requestType": "getUserInfo",
-            "email": request.values["email"],
-        }))
-
-        data = SocketFunctions.read_from_socket(userSocket)
-        userInfoStatus = json.loads(data)
-        userSocket.close()
-        try:
-            if loginJsonStatus["status"] == "Successful login.":
-                try:
-                    if userInfoStatus["status"] != "The user doesnt exists":
-                        # If we got here we also got the info from the server, and we can finally log in
-                        user = userInfoStatus["status"]  # The list of all the user info
-                        # Update the active tracker
-                        tracker = "No"
-                        if user[5] != "No":
-                            trackerDict = json.loads(user[5])
-                            tracker = [trackerDict["ip"], trackerDict["port"]]
-                        flask_login.login_user(User(user[0], user[1], user[2], user[3], user[4], tracker),
-                                               remember=True)
-                        return redirect('/application')
-                    else:
-                        # if we got here we didn't get the user info, but the user probably doesn't exist
-                        return "The user doesnt exists"
-                except KeyError:
-                    # If we got here, we got an error message from the get user info request.
-                    return userInfoStatus["errorMessage"]
-        except KeyError:  # If we get in here we got an error message from the server and the login failed
-            return loginJsonStatus["errorMessage"]
-    except Exception:  # If we got here we couldn't connect or get the data from the server
-        return "couldn't connect to the server"
+    if "status" in loginStatus.keys():
+        # If we got a status key, the login went smoothly. And we can check for the tracker in the user info
+        infoStatus = DBFunctions.get_user_info(request.values["email"], databaseLocation)
+        if "status" in infoStatus.keys():
+            # we also got the user info without any error, and we can finally log into the system
+            user = infoStatus["status"]  # The list of all the user info
+            # Update the active tracker
+            tracker = "No"
+            if user[5] != "No":
+                trackerDict = json.loads(user[5])
+                tracker = [trackerDict["ip"], trackerDict["port"]]
+            flask_login.login_user(User(user[0], user[1], user[2], user[3], user[4], tracker), remember=True)
+            return redirect('/application')
+        else:
+            return jsonify(infoStatus["errorMessage"])
+    else:
+        return jsonify(loginStatus["errorMessage"])
 
 
 @login_manager.user_loader
-def load_user(user_email):
+def load_user(userEmail):
     # Search user email in db
-    userSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    userSocket.connect(usersServerLocation)
-    SocketFunctions.send_data(userSocket, json.dumps({  # This is the request for registering a new user
-        "requestType": "getUserInfo",
-        "email": user_email,
-    }))
-
-    data = SocketFunctions.read_from_socket(userSocket)
-    jsonStatus = json.loads(data)
-    userSocket.close()
-    try:
-        if jsonStatus["status"] == "The user doesnt exists":
-            return None  # The user doesn't exist, and we need to send None
-
-        found_user = jsonStatus["status"]
-        if found_user[5] == "No":
-            return User(found_user[0], found_user[1], found_user[2], found_user[3], found_user[4],
-                        "No")
+    status = DBFunctions.get_user_info(userEmail, databaseLocation)
+    if "status" in status.keys():
+        # everything went well, and we didn't get any error.
+        found_user = status["status"]
+        if found_user[5] == "No":  # Checking if there are any trackers that the user is connected to and sending it with the user info if yes
+            return User(found_user[0], found_user[1], found_user[2], found_user[3], found_user[4],"No")
         tracker = json.loads(found_user[5])
         return User(found_user[0], found_user[1], found_user[2], found_user[3], found_user[4],
                     (tracker["ip"], tracker["port"]))
-    except KeyError:  # we got an error message from the server
+    else:
         return None
 
 
@@ -200,40 +176,18 @@ def settings():
 
     try:
         x = request.values["ipAddress"]
+        # Checking the values of the tracker change request.
+        ipObj = ipaddress.ip_address(request.values["ipAddress"])
     except KeyError:
         return render_template("tough_guy.html")
-
-    # Checking the values of the tracker change request.
-    try:
-        ipObj = ipaddress.ip_address(request.values["ipAddress"])
-        # If we got here without an exception thrown, the ip address is valid
     except ValueError:
         # The ip given is not an ip address.
         print("Ip address isn't valid.")
         return redirect("application.html")
 
-    usersSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    usersSocket.connect(usersServerLocation)
-
-    SocketFunctions.send_data(usersSocket, json.dumps({
-        "requestType": "changeTracker",
-        "email": flask_login.current_user.__dict__["email"],
-        "tracker": json.dumps({"ip": request.values["ipAddress"], "port": 6987})
-    }))
-
-    data = SocketFunctions.read_from_socket(usersSocket)
-    jsonData = json.loads(data)
-    usersSocket.close()
-    try:
-        if jsonData["status"] == "tracker set":
-            flask_login.current_user.__dict__["tracker"] = [(request.values["ipAddress"], int(request.values["port"]))]
-            return redirect("/application")
-        else:
-            # problem setting the tracker
-            print(jsonData)
-    except KeyError:
-        # error while setting the tracker
-        print(jsonData)
+    status = DBFunctions.change_tracker(flask_login.current_user.__dict__["email"],
+                                        {"ip": request.values["ipAddress"], "port": 6987}, databaseLocation)
+    return jsonify(status)
 
 
 @app.route('/upload', methods=["POST"])
@@ -315,22 +269,6 @@ def upload():
         return redirect("/application")
 
 
-@app.route('/download', methods=["POST"])
-def download():
-    data = request.data.decode()
-    fileData = json.loads(data)["fileInfo"]
-    downloadStatus = download_file(flask_login.current_user.__dict__["tracker"], fileData["fileID"],
-                                   fileData["fileName"],
-                                   int(fileData["numOfPieces"]), int(fileData["pieceSize"]))
-
-    if downloadStatus:
-        # TODO: notify the user that the download went smoothly.
-        pass
-    else:
-        # TODO: notify the user that the download failed.
-        pass
-
-
 @app.route('/refresh', methods=["POST"])
 def refresh():
     if request.method != "POST":
@@ -342,9 +280,6 @@ def refresh():
 
 @app.route("/delete", methods=["POST"])
 def delete():
-    if request.method != "POST":
-        # We don't want to get a get request for here.
-        return redirect("/application")
     data = request.data.decode()
     fileData = json.loads(data)["fileInfo"]
     deleteStatus = TrackerRequest.delete_file(flask_login.current_user.__dict__["tracker"],
@@ -433,6 +368,4 @@ def download_piece_from_peer(owners, pieceNum, pieceSize, fileName, path, hashli
 
 
 if __name__ == "__main__":
-    pServer = PeerServer()
-    threading.Thread(target=pServer.start_peer_server).start()
     app.run(host="0.0.0.0", port=80)

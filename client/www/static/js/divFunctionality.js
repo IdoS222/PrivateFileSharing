@@ -89,7 +89,7 @@ function deleteSelectedDiv() {
     fetch('/delete', { //sending a post request to the download route.
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json', //TODO: WHAT THE FUCK IS A HEADER
       },
       body: JSON.stringify({  fileInfo  }),
     }).then(response => response.json()).then(data => {
