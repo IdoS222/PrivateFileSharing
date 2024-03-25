@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>No tracker available</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/application.css') }}">
+</head>
+<body>
+  <!-- Top Bar -->
+  <div id="top-bar">
+    <div id="company-name">
+      <h2>Private torrent service</h2>
+    </div>
+    <div id="top-bar-controls">
+      <button class="btn" id="profile-btn">Profile</button>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+  </div>
+
+  <!-- Main Content -->
+  <div id="main-content">
+    <button type="submit" class="btn" id="uploadFilesButton" onclick="showUploadFileModal()" disabled>
+      <img src="{{ url_for('static', filename='Images/uploadImg.jpg') }}" alt="Upload Image">
+    </button>
+    <form id="refreshButtonForm" method="POST" action="/refresh">
+      <button type="submit" class="btn" id="refreshButton" disabled>
+        <img src="{{ url_for('static', filename='Images/refreshImg.jpg') }}" alt="Refresh">
+      </button>
+    </form>
+    <button type="submit" class="btn" id="removeButton" onclick="deleteSelectedDiv()" disabled>
+      <img src="{{ url_for('static', filename='Images/removeImg.jpg') }}" alt="Refresh">
+    </button>
+    <button type="submit" class="btn" id="downloadButton" onclick="downloadSelectedFile()" disabled>
+      <img src="{{ url_for('static', filename='Images/downloadImg.jpg') }}" alt="Refresh">
+    </button>
+    <hr class="separator-line">
+    <div id="file-container" class="scroll-container">
+    </div>
+  </div>
+</body>
+</html>

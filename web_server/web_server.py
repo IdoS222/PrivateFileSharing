@@ -5,12 +5,13 @@ import hashlib
 from tkinter import filedialog
 import flask_login
 from flask_login import LoginManager
-from flask import Flask, render_template, request, redirect, jsonify
+from flask import Flask, render_template, request, redirect, jsonify, current_app
 import os
 import subprocess
 from User import User
 from TrackerRequests import TrackerRequest
 import ipaddress
+from functools import wraps
 from SocketFunctions import SocketFunctions
 from tkinter import Tk
 import math
@@ -22,13 +23,35 @@ app.config['SECRET_KEY'] = 'dashfqh9f8hfwdfkjwefh78y9342h'  # Secret Key
 login_manager = LoginManager()  # Login manager object
 login_manager.init_app(app)
 login_manager.session_protection = "strong"
-databaseLocation = r"C:\Users\Owner\Desktop\עידו\school\הנדסת תוכנה\PrivateFileSharing\users.db"
+databaseLocation = r"C:\Users\Owner\Desktop\עידו\school\הנדסת תוכנה\PrivateFileSharing\web_server\users.db"
+
+
+#admin_required decorator
+def admin_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if flask_login.current_user.is_admin():
+            return func(*args, **kwargs)
+        else:
+            return current_app.login_manager.unauthorized()
+    return wrapper
+
+
 
 
 @app.route('/')
 def index():
     # TODO: MAKE A INDEX PAGE
     return render_template("index.html")
+
+
+#asdfasdf
+
+@app.route('/test')
+@flask_login.login_required
+@admin_required
+def test():
+    return "only for admin"
 
 
 @app.route('/userExists', methods=['GET'])
@@ -64,16 +87,15 @@ def application():
         if flask_login.current_user.__dict__["tracker"] != "No":
             trackerInfoAndFiles = TrackerRequest.get_files_and_tracker_info_from_tracker(
                 flask_login.current_user.__dict__["tracker"], flask_login.current_user.__dict__)
-            print(trackerInfoAndFiles)
             if len(trackerInfoAndFiles) == 1:
                 # The only reason this list is of len 1 is that we got an error message.
-                return render_template("application.html", errorMessage=trackerInfoAndFiles[0]["errorMessage"])
+                return render_template("applicationNoTracker.html", errorMessage=trackerInfoAndFiles[0]["errorMessage"])
 
             return render_template("application.html", files=trackerInfoAndFiles[0],
                                    trackerInfo=trackerInfoAndFiles[1])
         else:
             # There is no active tracker and we need to notify the user.
-            return render_template("application.html",
+            return render_template("applicationNoTracker.html",
                                    errorMessage="There is no active tracker! please connect to a tracker from the settings page.")
 
 
@@ -144,7 +166,7 @@ def load_user(userEmail):
         # everything went well, and we didn't get any error.
         found_user = status["status"]
         if found_user[5] == "No":  # Checking if there are any trackers that the user is connected to and sending it with the user info if yes
-            return User(found_user[0], found_user[1], found_user[2], found_user[3], found_user[4],"No")
+            return User(found_user[0], found_user[1], found_user[2], found_user[3], found_user[4], "No")
         tracker = json.loads(found_user[5])
         return User(found_user[0], found_user[1], found_user[2], found_user[3], found_user[4],
                     (tracker["ip"], tracker["port"]))
@@ -200,7 +222,7 @@ def upload():
     root.withdraw()
     root.call('wm', 'attributes', '.', '-topmost', True)
     pathToFile = filedialog.askopenfilename(
-        title="Select a file to upload to the tracker.")  # TODO: FIGURE OUT WHY THIS FUCKING FILE DIALOG IS NOT FUCKING STABLE FUCK YOU TKINTER FUCKING DOGSHIT
+        title="Select a file to upload to the tracker.")
     if pathToFile == '':
         # TODO: tell the user that he canceled the file upload. (maybe not???)
         return redirect('/application')
@@ -286,8 +308,7 @@ def delete():
                                               flask_login.current_user.__dict__,
                                               fileData["fileID"], fileData["fileName"])
 
-    return jsonify(
-        deleteStatus)  # returning the status so the javascript can handle it and display the message to the user.
+    return jsonify(deleteStatus)  # returning the status so the javascript can handle it and display the message to the user.
 
 
 def download_file(tracker, fileID, fileName, amountOfPieces, pieceSize):

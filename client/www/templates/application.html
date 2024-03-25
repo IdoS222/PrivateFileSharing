@@ -64,18 +64,25 @@
         <img src="{{ url_for('static', filename='Images/closeModalImg.jpg') }}" alt="Close">
       </button>
       <h5>Please specify what ranks can see this file</h5>
-      <button onclick="uploadFile('visitor')">
-        visitor
-      </button>
-      <button onclick="uploadFile('worker')">
-        worker
-      </button>
-      <button onclick="uploadFile('manager')">
-        manager
-      </button>
-      <button onclick="uploadFile('admin')">
-        admin
-      </button>
+<!--      <button onclick="uploadFile('visitor')">-->
+<!--        visitor-->
+<!--      </button>-->
+<!--      <button onclick="uploadFile('worker')">-->
+<!--        worker-->
+<!--      </button>-->
+<!--      <button onclick="uploadFile('manager')">-->
+<!--        manager-->
+<!--      </button>-->
+<!--      <button onclick="uploadFile('admin')">-->
+<!--        admin-->
+<!--      </button>-->
+
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="fileUpload" id="fileUpload">
+        <button type="submit">Upload</button>
+    </form>
+
+
     </div>
   </section>
 

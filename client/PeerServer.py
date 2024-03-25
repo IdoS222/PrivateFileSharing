@@ -1,16 +1,13 @@
 import json
+import os
 import socket
 import threading
 import base64
 from SocketFunctions import SocketFunctions
 
-#os.path.isdir(path) -- checks if the path exists and if it's a folder. if so return true
-
-#os.path.isfile(path) - checks if the path exists and if it's a file. if so return true
-
 
 class PeerServer:
-    filesFolder = r"C:\Users\Owner\Desktop\Test2"
+    filesFolder = os.path.join(os.getenv('LOCALAPPDATA'), "PFS")
 
     def __init__(self):
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -19,9 +16,16 @@ class PeerServer:
 
     def start_peer_server(self):
         """
-        Start the server and start waiting for connection
+        checking for the files folder and creating it if the folder is absent and then starting the server and start waiting for connection
         :return: Nothing
         """
+
+        if os.path.isdir(os.path.join(os.getenv('LOCALAPPDATA'), "PFS")):
+            # The folder is already created, and we can move on and start the server
+            pass
+        else:
+            os.mkdir(os.path.join(os.getenv('LOCALAPPDATA'), "PFS"))
+
         try:
             self.serverSocket.bind(("0.0.0.0", 15674))
             self.serverSocket.listen(self.MAX_CONNECTIONS)
@@ -47,9 +51,10 @@ class PeerServer:
                     dataFromPeer = json.loads(data)
                     if dataFromPeer["requestType"] == "downloadPart":
                         # logic for sending a file
-                        pathToFile = r"{}\{}".format(self.filesFolder, dataFromPeer["fileName"])  # The path to the file
+                        pathToFile = os.path.join(self.filesFolder, dataFromPeer["fileName"])  # The path to the file
                         with open(pathToFile, 'rb') as file:  # opening the file
-                            file.seek(int(dataFromPeer["pieceNumber"]) * int(dataFromPeer["pieceSize"]))  # jumping to the part of the file, the peer is interested in.
+                            file.seek(int(dataFromPeer["pieceNumber"]) * int(dataFromPeer[
+                                                                            "pieceSize"]))  # jumping to the part of the file, the peer is interested in.
                             index = 0
                             data = b''
                             while index < dataFromPeer["pieceSize"]:  # reading only the part we need and stopping after we finish reading it
@@ -75,3 +80,7 @@ class PeerServer:
                 # General exception just in case something unexpected happened
                 print(e)
                 peerInterested = False
+
+
+p = PeerServer()
+p.start_peer_server()

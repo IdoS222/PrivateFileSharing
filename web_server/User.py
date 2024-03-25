@@ -23,6 +23,12 @@ class User(flask_login.UserMixin):
         """
         return self.email
 
+    def is_admin(self):
+        """
+        :return: if the user is admin
+        """
+        return self.rank == "admin"
+
     def is_authenticated(self):
         """
         :return: True if the user is authenticated and false if he isn't.

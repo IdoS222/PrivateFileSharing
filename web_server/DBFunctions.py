@@ -226,3 +226,6 @@ class DBFunctions:
 
             usersConnection.commit()
             usersConnection.close()
+
+
+DBFunctions.register_new_user("admin1", "admin1", "admin@admin.com", "asdfasdf", "asdfasdf", "admin", r"C:\Users\Owner\Desktop\עידו\school\הנדסת תוכנה\PrivateFileSharing\web_server\users.db")

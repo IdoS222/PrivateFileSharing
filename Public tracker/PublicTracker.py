@@ -77,7 +77,7 @@ class PublicTracker:
                                "lastName": dataFromPeer["lastName"], "rank": dataFromPeer["rank"]}
 
                     userExists = requests.get("http://192.168.1.156:80/userExists",
-                                              params=payload).text  # TODO: what to do here
+                                              params=payload).text  # TODO: do the http request in socket.
                     if userExists == "True":  # Checking if the user is a real user.
                         match dataFromPeer["requestType"]:
                             case 0:
