@@ -5,13 +5,7 @@ from SocketFunctions import SocketFunctions
 
 class TrackerRequest:
     @staticmethod
-    def get_files_and_tracker_info_from_tracker(tracker, user):
-        """
-        Getting all the files from a tracker that the rank can get and the tracker info.
-        :param tracker: The tracker address [ip, port].
-        :param user: The user that is sending the request.
-        :return: The files.
-        """
+    def get_files_and_info_from_tracker(tracker, user):
         try:
             filesRequest = json.dumps({
                 "requestType": 0,
@@ -25,8 +19,10 @@ class TrackerRequest:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect(tuple(tracker))
             SocketFunctions.send_data(sock, filesRequest)
-            data = SocketFunctions.read_from_socket(sock)
-            files = json.loads(data)
+
+            rawFiles = SocketFunctions.read_from_socket(sock)
+            files = json.loads(rawFiles)
+
             dataRequest = json.dumps({
                 "requestType": 6,
                 "userID": user["userID"],
@@ -35,18 +31,15 @@ class TrackerRequest:
                 "email": user["email"],
                 "rank": user["rank"]
             })
-            print("yo")
+
             SocketFunctions.send_data(sock, dataRequest)
 
-            data = SocketFunctions.read_from_socket(sock)
-            print("ya")
-            trackerData = json.loads(data)
+            rawInfo = SocketFunctions.read_from_socket(sock)
+            info = json.loads(rawInfo)
             sock.close()
-            return [files, trackerData]
-        except socket.error:  # This error means we couldn't connect to the tracker
-            return [{"errorMessage": "Couldn't connect to the tracker"}]
+            return [files, info]
         except Exception:
-            return [{"errorMessage": "Couldn't get the files and the tracker info from the tracker"}]
+            return {"errorMessage": "Couldn't get the files from the tracker"}
 
     @staticmethod
     def upload_file_to_tracker(tracker, user, fileName, fileSize, pieceSize, amountOfPieces, fileVisibility, fileOwners,
@@ -91,10 +84,8 @@ class TrackerRequest:
             status = json.loads(data)
             sock.close()
             return status
-        except socket.error:  # This error means we couldn't connect to the tracker
-            return {"errorMessage": "Couldn't connect to the tracker"}
         except Exception:
-            return {"errorMessage": "Couldn't upload the file to the tracker"}
+            return {"errorMessage": "Couldn't upload the file to the server"}
 
     @staticmethod
     def start_download(tracker, user, fileID, fileName):
@@ -126,9 +117,8 @@ class TrackerRequest:
             answer = json.loads(data)
             sock.close()
             return answer
-        except socket.error:  # This error means we couldn't connect to the tracker
-            return {"errorMessage": "Couldn't connect to the tracker"}
-        except Exception:
+        except Exception as e:
+            print(e)
             return {"errorMessage": "Couldn't start the download"}
 
     @staticmethod
@@ -161,8 +151,6 @@ class TrackerRequest:
             status = json.loads(data)
             sock.close()
             return status
-        except socket.error:  # This error means we couldn't connect to the tracker
-            return {"errorMessage": "Couldn't connect to the tracker"}
         except Exception:
             return {"errorMessage": "Couldn't send the finish download notification to the tracker"}
 
@@ -197,8 +185,34 @@ class TrackerRequest:
             status = json.loads(data)
             sock.close()
             return status
-        except socket.error:  # This error means we couldn't connect to the tracker
-            return {"errorMessage": "Couldn't connect to the tracker"}
         except Exception:
             return {"errorMessage": "Couldn't delete the file from the tracker"}
 
+    @staticmethod
+    def get_tracker_data(tracker, user):
+        """
+        Get the tracker data.
+        :param tracker: The tracker address [ip, port].
+        :param user: The user that is sending the request.
+        :return: The files.
+        """
+        try:
+            dataRequest = json.dumps({
+                "requestType": 6,
+                "userID": user["userID"],
+                "firstName": user["firstName"],
+                "lastName": user["lastName"],
+                "email": user["email"],
+                "rank": user["rank"]
+            })
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect(tuple(tracker))
+            SocketFunctions.send_data(sock, dataRequest)
+
+            data = SocketFunctions.read_from_socket(sock)
+            trackerData = json.loads(data)
+            sock.close()
+            return trackerData
+        except Exception:
+            return {"errorMessage": "Couldn't get the tracker data"}

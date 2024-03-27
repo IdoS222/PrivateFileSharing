@@ -1,6 +1,5 @@
 import flask_login
 
-
 class User(flask_login.UserMixin):
     def __init__(self, userID, firstName, lastName, email, rank, tracker=None, authenticated=False):
         self.userID = userID
@@ -22,12 +21,6 @@ class User(flask_login.UserMixin):
         :return: The email of the user.
         """
         return self.email
-
-    def is_admin(self):
-        """
-        :return: if the user is admin
-        """
-        return self.rank == "admin"
 
     def is_authenticated(self):
         """

@@ -7,14 +7,25 @@ function showUploadFileModal() {
 function closeUploadFileModal() {
     modal.style.display = "none";
 }
-function uploadFile(rank) {
+function uploadFile() {
      closeUploadFileModal(); //closing the modal
-     fetch('/upload', { //sending a post request to the download route.
+
+     const rank = document.getElementById("rank").value
+     const fileUpload = document.getElementById("fileUpload")
+
+     if (fileUpload.files.length === 0) {
+        console.log("no files")
+        return
+     }
+
+     const file = fileUpload.files;
+
+     fetch('/upload', { //http post request.
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({  "rank": rank  }),
+      body: JSON.stringify({  "rank": rank, "file": file  }),
     })
       .then(response => response.json())
       .then(data => {
